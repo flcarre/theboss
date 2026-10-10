@@ -55,7 +55,8 @@ ou un meuble.
 
 `site/` contient le site de présentation (Next.js, export statique, en anglais) avec un bureau jouable dans le
 navigateur : le renard marche, parle aux robots et fait claquer le fouet. `cd site && npm install && npm run dev`
-pour le lancer, `npm run build` pour l'export dans `site/out`. Après un changement de sprites dans le jeu,
+pour le lancer, `npm run build` pour l'export dans `site/out`. Le projet Vercel `theboss` est branché sur ce repo
+(dossier racine `site`) : chaque push sur `main` redéploie https://theboss-iota.vercel.app. Après un changement de sprites dans le jeu,
 `python3 site/scripts/import_game_assets.py` recopie les objets, murs et personnages et refait les planches
 d'animation du site. Les captures de `site/public/assets/screens` viennent de l'app nourrie de données fictives,
 avec des limites d'usage simulées.

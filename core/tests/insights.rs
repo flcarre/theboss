@@ -134,7 +134,7 @@ impl Stub {
 }
 
 const CREDENTIALS: &str = r#"{"claudeAiOauth":{"accessToken":"tok-123","expiresAt":4102444800000,"subscriptionType":"team"}}"#;
-const CLAUDE_USAGE: &str = r#"{"five_hour":{"utilization":37,"resets_at":"2026-10-10T12:00:00Z"},"seven_day":{"utilization":12,"resets_at":"2026-10-14T00:00:00Z"}}"#;
+const CLAUDE_USAGE: &str = r#"{"five_hour":{"utilization":37,"resets_at":"2099-10-10T12:00:00Z"},"seven_day":{"utilization":12,"resets_at":"2099-10-14T00:00:00Z"}}"#;
 
 fn found(credentials: &str) -> usage::CredentialReader {
     let data = credentials.as_bytes().to_vec();
@@ -543,6 +543,29 @@ fn claude_usage_keeps_the_last_good_reading_while_throttled() {
     client.forget_credentials();
     let unreachable = ClaudeUsageClient::new("http://127.0.0.1:1/usage", found(CREDENTIALS)).usage(true);
     assert!(matches!(unreachable.state, UsageState::Failed(message) if message.starts_with("Network unavailable: ")));
+}
+
+#[test]
+fn claude_usage_rolls_over_a_window_whose_reset_passed_while_throttled() {
+    let _home = make_home();
+    std::fs::create_dir_all(Paths::claude()).unwrap();
+    let soon = (now() + chrono::Duration::milliseconds(1500)).to_rfc3339();
+    let body = format!(
+        r#"{{"five_hour":{{"utilization":100,"resets_at":"{soon}"}},"seven_day":{{"utilization":34,"resets_at":"2099-10-14T00:00:00Z"}}}}"#
+    );
+    let stub = Stub::start(200, &body);
+    let client = ClaudeUsageClient::new(&stub.url, found(CREDENTIALS));
+    let before = client.usage(true);
+    assert_eq!(before.windows.iter().map(|window| window.used_percent).collect::<Vec<_>>(), vec![100.0, 34.0]);
+
+    std::thread::sleep(std::time::Duration::from_millis(1600));
+    stub.set(429, "{}");
+    let after = client.usage(true);
+    assert_eq!(after.state, UsageState::Ok);
+    assert_eq!(after.windows.iter().map(|window| window.used_percent).collect::<Vec<_>>(), vec![0.0, 34.0]);
+    assert!(after.windows[0].resets_at.is_none());
+    assert!(after.windows[1].resets_at.is_some());
+    assert_eq!(client.usage(false).windows[0].used_percent, 0.0);
 }
 
 #[test]

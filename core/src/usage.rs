@@ -89,6 +89,11 @@ impl ProviderUsage {
         self.observed_at = observed_at;
         self
     }
+
+    pub fn rolled_over(mut self, current: Timestamp) -> Self {
+        self.windows = self.windows.into_iter().map(|window| window.rolled_over(current)).collect();
+        self
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -153,7 +158,7 @@ impl Default for UsageEndpoints {
 }
 
 pub fn throttled_message() -> String {
-    tr("Anthropic is throttling usage reads. Retrying in 5 min.")
+    tr("Anthropic is throttling usage reads. Retrying soon.")
 }
 
 pub fn http_agent() -> ureq::Agent {
@@ -162,6 +167,7 @@ pub fn http_agent() -> ureq::Agent {
 
 pub struct HttpResponse {
     pub status: u16,
+    pub retry_after: Option<u64>,
     pub body: Vec<u8>,
 }
 
@@ -172,8 +178,13 @@ pub fn http_get(agent: &ureq::Agent, url: &str, headers: &[(&str, &str)]) -> Res
     }
     let mut response = request.call().map_err(|error| error.to_string())?;
     let status = response.status().as_u16();
+    let retry_after = response
+        .headers()
+        .get("retry-after")
+        .and_then(|value| value.to_str().ok())
+        .and_then(|value| value.trim().parse::<u64>().ok());
     let body = response.body_mut().read_to_vec().map_err(|error| error.to_string())?;
-    Ok(HttpResponse { status, body })
+    Ok(HttpResponse { status, retry_after, body })
 }
 
 #[derive(Default)]
@@ -221,31 +232,36 @@ impl ClaudeUsageClient {
             let current = now();
             if let (Some(until), Some(last)) = (cache.backoff_until, &cache.last) {
                 if current < until {
-                    return last.clone();
+                    return last.clone().rolled_over(current);
                 }
             }
             if let (false, Some(last), Some(fetched)) = (force, &cache.last, cache.last_fetch) {
                 if (current - fetched).num_milliseconds() < 120_000 {
-                    return last.clone();
+                    return last.clone().rolled_over(current);
                 }
             }
         }
-        let mut result = self.fetch();
+        let fetched = self.fetch();
         let mut cache = self.cache();
-        cache.last_fetch = Some(now());
-        if matches!(&result.state, UsageState::Failed(message) if *message == throttled_message()) {
-            cache.backoff_until = Some(now() + chrono::Duration::seconds(300));
-            if let Some(good) = cache.last_good.as_ref().filter(|good| good.state == UsageState::Ok) {
-                result = good.clone();
+        let current = now();
+        cache.last_fetch = Some(current);
+        let result = match fetched {
+            Ok(result) => {
+                cache.backoff_until = None;
+                if result.state == UsageState::Ok {
+                    cache.last_good = Some(result.clone());
+                }
+                result
             }
-        } else {
-            cache.backoff_until = None;
-        }
-        if result.state == UsageState::Ok {
-            cache.last_good = Some(result.clone());
-        }
+            Err(throttle) => {
+                cache.backoff_until = Some(current + throttle.backoff());
+                cache.last_good.clone().filter(|good| good.state == UsageState::Ok).unwrap_or_else(|| {
+                    ProviderUsage::new(Harness::Claude, UsageState::Failed(throttled_message())).with_plan(throttle.plan)
+                })
+            }
+        };
         cache.last = Some(result.clone());
-        result
+        result.rolled_over(current)
     }
 
     fn credentials(&self) -> Result<ClaudeCredentials, UsageState> {
@@ -261,10 +277,10 @@ impl ClaudeUsageClient {
         Ok(credentials)
     }
 
-    fn fetch(&self) -> ProviderUsage {
+    fn fetch(&self) -> Result<ProviderUsage, Throttle> {
         let credentials = match self.credentials() {
             Ok(credentials) => credentials,
-            Err(state) => return ProviderUsage::new(Harness::Claude, state),
+            Err(state) => return Ok(ProviderUsage::new(Harness::Claude, state)),
         };
         let plan = credentials.subscription.clone();
         let failed = |message: String| ProviderUsage::new(Harness::Claude, UsageState::Failed(message)).with_plan(plan.clone());
@@ -276,19 +292,34 @@ impl ClaudeUsageClient {
         ];
         let response = match http_get(&self.agent, &self.endpoint, &headers) {
             Ok(response) => response,
-            Err(error) => return failed(trf!("Network unavailable: %@", error)),
+            Err(error) => return Ok(failed(trf!("Network unavailable: %@", error))),
         };
-        match response.status {
+        Ok(match response.status {
             401 | 403 => {
                 self.cache().credentials = None;
                 ProviderUsage::new(Harness::Claude, UsageState::TokenExpired).with_plan(plan)
             }
-            429 => failed(throttled_message()),
+            429 => return Err(Throttle { retry_after: response.retry_after, plan }),
             200 => ProviderUsage::new(Harness::Claude, UsageState::Ok)
                 .with_plan(plan)
                 .with_windows(parse_claude_windows(&response.body), Some(now())),
             code => failed(trf!("HTTP %d response from Anthropic.", i64::from(code))),
-        }
+        })
+    }
+}
+
+const DEFAULT_THROTTLE_BACKOFF: u64 = 300;
+const MAX_THROTTLE_BACKOFF: u64 = 3600;
+
+struct Throttle {
+    retry_after: Option<u64>,
+    plan: Option<String>,
+}
+
+impl Throttle {
+    fn backoff(&self) -> chrono::Duration {
+        let seconds = self.retry_after.unwrap_or(DEFAULT_THROTTLE_BACKOFF).clamp(60, MAX_THROTTLE_BACKOFF);
+        chrono::Duration::seconds(seconds as i64)
     }
 }
 
@@ -344,20 +375,10 @@ impl UsageService {
         let Some(snapshot) = self.live_monitor.codex_rate_limits() else {
             return ProviderUsage::new(Harness::Codex, UsageState::NoData);
         };
-        let current = now();
-        let windows = snapshot
-            .windows
-            .into_iter()
-            .map(|mut window| {
-                if window.resets_at.is_some_and(|reset| reset < current) {
-                    window.used_percent = 0.0;
-                }
-                window
-            })
-            .collect();
         ProviderUsage::new(Harness::Codex, UsageState::Ok)
             .with_plan(snapshot.plan)
-            .with_windows(windows, Some(snapshot.observed_at))
+            .with_windows(snapshot.windows, Some(snapshot.observed_at))
+            .rolled_over(now())
     }
 
     pub fn cursor_usage(&self) -> Option<ProviderUsage> {

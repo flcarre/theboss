@@ -30,6 +30,7 @@ export default function Header() {
       </a>
       <nav className="bar-links" aria-label="Sections">
         <a href="#tour">The floor</a>
+        <a href="#menubar">Menu bar</a>
         <a href="#staff">The staff</a>
         <a href="#rules">Learned rules</a>
         <a href="#local">Privacy</a>
@@ -37,7 +38,7 @@ export default function Header() {
       <div className="bar-clock" aria-hidden="true">
         <span className="dot dot-live" />
         <span suppressHydrationWarning>{time}</span>
-        <span className="bar-clock-label">· 6 robots on shift</span>
+        <span className="bar-clock-label">· 8 robots on shift</span>
       </div>
       <a className="btn btn-gold btn-sm" href="#install">Get the app</a>
     </header>

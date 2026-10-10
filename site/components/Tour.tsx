@@ -18,9 +18,19 @@ const STEPS: Step[] = [
     shot: "dialog",
     label: "Talking to a robot",
     title: "Talk to a robot",
-    prop: "/assets/boss_portrait.png",
+    prop: "/assets/fox_portrait.png",
     body: (
       <>Walk up and press Space. You get the task, your last order, the action it&rsquo;s stuck on and the whole conversation. Jump back into the session, open its folder, or copy the resume command.</>
+    ),
+  },
+  {
+    shot: "whip",
+    label: "The whip",
+    title: "Crack the whip",
+    key: "F",
+    prop: "/assets/characters/boss/rotations/east.png",
+    body: (
+      <>Face a desk and press F. A working robot types twice as fast for a while, a waiting one jumps and takes you to its session so you can approve, a sleeping one wakes up with a start. The whiteboard keeps count.</>
     ),
   },
   {
@@ -68,6 +78,7 @@ const STEPS: Step[] = [
     shot: "domain",
     label: "Archive cabinet",
     title: "The archive cabinet",
+    key: "⌘6",
     prop: "/assets/objects/archive_cabinet.png",
     body: (
       <>A local domain model, one source of truth per project: intent, written conventions, learned decisions, recent work, and where CLAUDE.md and AGENTS.md disagree. Export it to <code>.boss/domain.md</code> with a diff.</>

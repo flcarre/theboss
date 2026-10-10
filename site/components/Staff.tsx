@@ -6,6 +6,8 @@ type Card = { harness: Harness; flavor: string; reads: string; extra: [string, s
 const CARDS: Card[] = [
   { harness: "claude", flavor: "Orange, tireless, and polite enough to ask before it runs anything risky.", reads: "~/.claude", extra: ["Limits", "5-hour & weekly, live"], zoom: 1.5 },
   { harness: "codex", flavor: "White and teal. Quiet. Keeps its own rate limits in its logs, so we simply read them.", reads: "~/.codex", extra: ["Limits", "From session logs"], zoom: 1.7 },
+  { harness: "gemini", flavor: "White and blue, slim, fast on its feet. Keeps its chats in tidy JSONL files.", reads: "~/.gemini", extra: ["Rules", "GEMINI.md"], zoom: 1.7 },
+  { harness: "copilot", flavor: "Grey and violet, with a propeller hat. Lives in your terminal now, not just your editor.", reads: "~/.copilot", extra: ["Rules", ".github instructions"], zoom: 1.55 },
   { harness: "cursor", flavor: "Matte black. Lives in your editor all day, still clocks in on the floor.", reads: "~/.cursor", extra: ["Limits", "Usage summary"], zoom: 1.55 },
   { harness: "pi", flavor: "Compact and minimal. Does a lot with very little harness around it.", reads: "~/.pi", extra: ["Tracks", "Sessions & tokens"], zoom: 1.25 },
   { harness: "omp", flavor: "Cheerful. Speaks fluent Pi, with a few extra tools on its belt.", reads: "~/.omp", extra: ["Tracks", "Sessions & tokens"], zoom: 1.32 },
@@ -15,9 +17,9 @@ export default function Staff() {
   return (
     <section className="staff" id="staff">
       <header className="section-head reveal">
-        <p className="eyebrow">03 — The staff</p>
+        <p className="eyebrow">04 — The staff</p>
         <h2>
-          Five harnesses.
+          Seven harnesses.
           <br />
           <em>One payroll.</em>
         </h2>

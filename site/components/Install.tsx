@@ -21,7 +21,7 @@ export default function Install() {
   return (
     <section className="install" id="install">
       <header className="section-head reveal">
-        <p className="eyebrow">06 — Clock in</p>
+        <p className="eyebrow">07 — Clock in</p>
         <h2>
           Build it, open it,
           <br />
@@ -59,12 +59,16 @@ export default function Install() {
             <dd>Walk</dd>
             <dt><span className="key">⇧</span></dt>
             <dd>Run</dd>
+            <dt><span className="key">F</span></dt>
+            <dd>Crack the whip</dd>
             <dt><span className="key">Space</span><span className="key">↩</span></dt>
             <dd>Talk</dd>
             <dt><span className="key">Esc</span></dt>
             <dd>Menu</dd>
-            <dt><span className="key">⌘1</span><span className="key">⌘5</span></dt>
+            <dt><span className="key">⌘1</span><span className="key">⌘6</span></dt>
             <dd>Jump to a screen</dd>
+            <dt><span className="key">⌘,</span></dt>
+            <dd>Settings, English or French</dd>
             <dt><span className="key">Click</span></dt>
             <dd>Walk to a robot or a piece of furniture</dd>
           </dl>

@@ -1,5 +1,5 @@
-import { HARNESS_COLOR, ROBOT_SCALE, SHEETS, STILLS, type SheetName, sheetUrl, stillUrl } from "./sprites";
-import { PROP_INFO, type PropInfo, type Robot, type RobotState } from "./staff";
+import { HARNESS_COLOR, HARNESS_ORDER, ROBOT_SCALE, SHEETS, STILLS, type Dir, type SheetName, sheetUrl, stillUrl } from "./sprites";
+import { PROP_INFO, WHIP_LINES, type PropInfo, type Robot, type RobotState } from "./staff";
 
 export const WORLD_W = 1152;
 export const WORLD_H = 640;
@@ -18,9 +18,9 @@ export type Callbacks = {
   onCounts: (counts: Record<RobotState, number>) => void;
   onTalk: (target: Target) => void;
   onActive: (active: boolean) => void;
+  onToast: (text: string) => void;
 };
 
-type Dir = "south" | "north" | "east" | "west";
 type Rect = { x: number; y: number; w: number; h: number };
 type Point = { x: number; y: number };
 
@@ -31,6 +31,7 @@ type PropDef = {
   base: number;
   bottom: number;
   wall?: boolean;
+  flat?: boolean;
   spot?: Point;
   collider?: Rect;
 };
@@ -38,36 +39,55 @@ type PropDef = {
 type Desk = { x: number; base: number };
 
 type Sparkle = { x: number; y: number; vx: number; vy: number; life: number; color: string };
+type Crack = { x: number; y: number; t: number };
+type Whip = { t: number; target: Robot | null; struck: boolean };
 
 const OBJECT_BOTTOM: Record<string, number> = {
   archive_cabinet: 99, bookshelf: 117, coffee_machine: 88, desk_worker: 76, intray: 84,
   server_rack: 108, sofa: 61, wall_screen: 81, water_cooler: 80, whiteboard: 104, window_wall: 77,
+  door: 120, plant: 76, rug: 57,
 };
 
-const WINDOWS = [420, 732];
+const WINDOWS = [320, 832];
 
 const DESKS: Desk[] = [
-  { x: 240, base: 336 }, { x: 576, base: 336 }, { x: 912, base: 336 },
-  { x: 240, base: 516 }, { x: 576, base: 516 }, { x: 912, base: 516 },
+  { x: 192, base: 336 }, { x: 448, base: 336 }, { x: 704, base: 336 }, { x: 960, base: 336 },
+  { x: 192, base: 516 }, { x: 448, base: 516 }, { x: 704, base: 516 }, { x: 960, base: 516 },
 ];
 
 const PROPS: PropDef[] = [
-  { id: "window", img: "window_wall", x: 420, base: 104, bottom: 77, wall: true, spot: { x: 420, y: 214 } },
+  { id: "window", img: "window_wall", x: 320, base: 104, bottom: 77, wall: true, spot: { x: 320, y: 214 } },
   { id: "screen", img: "wall_screen", x: 576, base: 112, bottom: 81, wall: true, spot: { x: 576, y: 214 } },
-  { id: "window", img: "window_wall", x: 732, base: 104, bottom: 77, wall: true, spot: { x: 732, y: 214 } },
-  { id: "servers", img: "server_rack", x: 46, base: 200, bottom: 108, spot: { x: 70, y: 216 } },
-  { id: "servers", img: "server_rack", x: 96, base: 200, bottom: 108, spot: { x: 70, y: 216 } },
-  { id: "bookshelf", img: "bookshelf", x: 330, base: 200, bottom: 117, spot: { x: 330, y: 216 } },
-  { id: "archive", img: "archive_cabinet", x: 420, base: 196, bottom: 99, spot: { x: 420, y: 216 } },
-  { id: "whiteboard", img: "whiteboard", x: 770, base: 200, bottom: 104, spot: { x: 770, y: 216 } },
-  { id: "cooler", img: "water_cooler", x: 1016, base: 192, bottom: 80, spot: { x: 1016, y: 216 } },
-  { id: "coffee", img: "coffee_machine", x: 1088, base: 194, bottom: 88, spot: { x: 1088, y: 216 } },
-  { id: "sofa", img: "sofa", x: 1060, base: 626, bottom: 61, spot: { x: 1060, y: 578 }, collider: { x: 1026, y: 596, w: 68, h: 32 } },
-  { id: "intray", img: "intray", x: 400, base: 624, bottom: 84, spot: { x: 400, y: 584 }, collider: { x: 378, y: 596, w: 44, h: 30 } },
+  { id: "window", img: "window_wall", x: 832, base: 104, bottom: 77, wall: true, spot: { x: 832, y: 214 } },
+  { id: "door", img: "door", x: 704, base: 134, bottom: 120, wall: true, spot: { x: 704, y: 216 } },
+  { id: "servers", img: "server_rack", x: 40, base: 200, bottom: 108, spot: { x: 66, y: 216 } },
+  { id: "servers", img: "server_rack", x: 92, base: 200, bottom: 108, spot: { x: 66, y: 216 } },
+  { id: "bookshelf", img: "bookshelf", x: 190, base: 200, bottom: 117, spot: { x: 190, y: 216 } },
+  { id: "archive", img: "archive_cabinet", x: 250, base: 196, bottom: 99, spot: { x: 250, y: 216 } },
+  { id: "whiteboard", img: "whiteboard", x: 450, base: 200, bottom: 104, spot: { x: 450, y: 216 } },
+  { id: "plant", img: "plant", x: 790, base: 198, bottom: 76, spot: { x: 790, y: 216 } },
+  { id: "cooler", img: "water_cooler", x: 930, base: 192, bottom: 80, spot: { x: 930, y: 216 } },
+  { id: "coffee", img: "coffee_machine", x: 1000, base: 194, bottom: 88, spot: { x: 1000, y: 216 } },
+  { id: "rug", img: "rug", x: 320, base: 452, bottom: 57, flat: true },
+  { id: "rug", img: "rug", x: 576, base: 452, bottom: 57, flat: true },
+  { id: "rug", img: "rug", x: 832, base: 452, bottom: 57, flat: true },
+  { id: "rug", img: "rug", x: 576, base: 636, bottom: 57, flat: true },
+  { id: "intray", img: "intray", x: 420, base: 624, bottom: 84, spot: { x: 420, y: 584 }, collider: { x: 398, y: 596, w: 44, h: 30 } },
+  { id: "plant", img: "plant", x: 1120, base: 628, bottom: 76, spot: { x: 1100, y: 584 }, collider: { x: 1100, y: 604, w: 40, h: 26 } },
+  { id: "sofa", img: "sofa", x: 1010, base: 626, bottom: 61, spot: { x: 1010, y: 578 }, collider: { x: 976, y: 596, w: 68, h: 32 } },
 ];
+
+const WHIP_FRAME = 0.055;
+const WHIP_FRAMES = 8;
+const BOOST_SECONDS = 7;
+const PLAQUE_W = 128;
+const PLAQUE_H = 30;
+const ROUNDED = "ui-rounded, 'SF Pro Rounded', 'Nunito', system-ui, sans-serif";
+const STATUS_COLOR: Record<RobotState, string> = { working: "#4CD18A", waiting: "#FF9A2E", done: "#A8B0BD" };
 
 const SHADE_SCALE = 0.25;
 const FLOOR_URL = "/assets/tiles/wood.png";
+const WALL_URL = "/assets/walls/wall_openspace.png";
 const ATTRACT_PAUSE = 1.6;
 const IDLE_BEFORE_ATTRACT = 9;
 
@@ -113,6 +133,11 @@ export class Office {
   private sparkles: Sparkle[] = [];
   private glows = new Map<string, HTMLCanvasElement>();
   private hearts = new Map<string, number>();
+  private boosts = new Map<string, number>();
+  private jolts = new Map<string, number>();
+  private cracks: Crack[] = [];
+  private whip: Whip | null = null;
+  private shakeUntil = 0;
   private night = true;
   private dialogOpen = false;
   private active = false;
@@ -171,10 +196,51 @@ export class Office {
     this.emitCounts();
   }
 
-  takeControl() {
-    this.attract = false;
+  crackWhip() {
+    if (this.whip || this.dialogOpen || !this.ready) return;
     this.path = [];
     this.pendingTalk = null;
+    this.idle = 0;
+    this.boss.moving = false;
+    let target: Robot | null = null;
+    let best = TALK_RANGE + 24;
+    for (const robot of this.robots) {
+      const d = DESKS[robot.desk];
+      const dist = Math.hypot(d.x - this.boss.x, d.base + 30 - this.boss.y);
+      if (dist < best) {
+        best = dist;
+        target = robot;
+      }
+    }
+    if (target) this.boss.dir = "north";
+    this.whip = { t: 0, target, struck: false };
+    this.kick();
+  }
+
+  private strike(whip: Whip) {
+    whip.struck = true;
+    const reach = { south: [0, 46], north: [0, -86], east: [70, -40], west: [-70, -40] }[this.boss.dir];
+    const robot = whip.target;
+    const impact = robot ? { x: DESKS[robot.desk].x, y: this.robotHead(robot) + 30 } : { x: this.boss.x + reach[0], y: this.boss.y + reach[1] };
+    this.cracks.push({ ...impact, t: 0 });
+    this.shakeUntil = this.time + 0.16;
+    if (!robot) return;
+    this.jolts.set(robot.id, this.time + 0.35);
+    if (robot.state === "working") this.boosts.set(robot.id, this.time + BOOST_SECONDS);
+    if (this.attract) return;
+    this.cb.onToast(WHIP_LINES[robot.state](robot.name));
+    if (robot.state === "waiting") {
+      const target: Target = { kind: "robot", robot };
+      setTimeout(() => this.cb.onTalk(target), 650);
+    }
+  }
+
+  takeControl() {
+    if (this.attract) {
+      this.path = [];
+      this.pendingTalk = null;
+    }
+    this.attract = false;
     this.idle = 0;
     this.setActive(true);
   }
@@ -188,10 +254,10 @@ export class Office {
   private async load() {
     const objects = Object.keys(OBJECT_BOTTOM).map((n) => `/assets/objects/${n}.png`);
     const sheets = (Object.keys(SHEETS) as SheetName[]).map(sheetUrl);
-    const stills = (["boss", "claude", "codex", "cursor", "pi", "omp"] as const).map((h) => stillUrl(h));
+    const stills = HARNESS_ORDER.map((h) => stillUrl(h)).concat(stillUrl("boss"));
     const bossStills = (["north", "east", "west"] as const).map((d) => stillUrl("boss", d));
-    const emotes = ["alert", "sleep", "heart", "dots"].map((e) => `/assets/emotes/${e}.png`);
-    const all = [...objects, ...sheets, ...stills, ...bossStills, ...emotes, FLOOR_URL];
+    const emotes = ["alert", "sleep", "heart", "dots", "sweat"].map((e) => `/assets/emotes/${e}.png`);
+    const all = [...objects, ...sheets, ...stills, ...bossStills, ...emotes, FLOOR_URL, WALL_URL];
     await Promise.all(all.map(async (src) => this.images.set(src, await loadImage(src))));
     await document.fonts.ready;
     this.floor = this.ctx.createPattern(this.img(FLOOR_URL), "repeat") ?? undefined;
@@ -269,7 +335,13 @@ export class Office {
         return;
       }
       if ((isArrow || key === "Shift" || key === " " || key === "Enter") && !this.active) return;
-      if (isWasd && !this.visible) return;
+      if ((isWasd || key === "f") && !this.visible) return;
+      if (key === "f") {
+        e.preventDefault();
+        if (!this.active) this.takeControl();
+        this.crackWhip();
+        return;
+      }
       if (isArrow || isWasd || key === "Shift") {
         if (isArrow || isWasd) e.preventDefault();
         if (!this.active) this.takeControl();
@@ -360,6 +432,7 @@ export class Office {
       if (p.x > d.x - 66 && p.x < d.x + 66 && p.y > d.base - 150 && p.y < d.base + 4) return { kind: "robot", robot };
     }
     for (const prop of PROPS) {
+      if (!prop.spot) continue;
       const img = this.images.get(`/assets/objects/${prop.img}.png`);
       if (!img) continue;
       const left = prop.x - img.width / 2;
@@ -475,6 +548,14 @@ export class Office {
       if (this.keys.has("ArrowUp") || this.keys.has("w")) vy -= 1;
       if (this.keys.has("ArrowDown") || this.keys.has("s")) vy += 1;
     }
+    if (this.whip) {
+      this.whip.t += dt;
+      if (!this.whip.struck && this.whip.t >= WHIP_FRAME * WHIP_FRAMES * 0.6) this.strike(this.whip);
+      if (this.whip.t >= WHIP_FRAME * WHIP_FRAMES + 0.08) this.whip = null;
+      vx = 0;
+      vy = 0;
+    }
+    this.cracks = this.cracks.filter((c) => (c.t += dt) < 0.7);
     const run = this.keys.has("Shift");
     let speed = run ? 290 : 170;
 
@@ -487,7 +568,10 @@ export class Office {
         if (!this.path.length && this.pendingTalk) {
           const target = this.pendingTalk;
           this.pendingTalk = null;
-          if (this.attract) this.faceTarget(target);
+          if (this.attract) {
+            this.faceTarget(target);
+            if (target.kind === "robot" && target.robot.state === "working" && Math.random() < 0.5) this.crackWhip();
+          }
           else this.talk(target);
         }
       } else {
@@ -538,7 +622,7 @@ export class Office {
       let best = TALK_RANGE;
       const candidates: Target[] = [
         ...this.robots.map((robot) => ({ kind: "robot", robot }) as Target),
-        ...PROPS.map((p) => ({ kind: "prop", prop: PROP_INFO[p.id] }) as Target),
+        ...PROPS.filter((p) => p.spot).map((p) => ({ kind: "prop", prop: PROP_INFO[p.id] }) as Target),
       ];
       for (const c of candidates) {
         const s = this.spotFor(c);
@@ -587,7 +671,10 @@ export class Office {
     ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
     const offX = Math.max(0, (this.canvas.width / this.scale - WORLD_W) / 2);
     const offY = Math.max(0, (this.canvas.height / this.scale - WORLD_H) / 2);
-    ctx.setTransform(this.scale, 0, 0, this.scale, (offX - Math.round(this.cam.x)) * this.scale, (offY - Math.round(this.cam.y)) * this.scale);
+    const shaking = this.shakeUntil > this.time;
+    const sx = shaking ? Math.round(Math.sin(this.time * 90) * 4) : 0;
+    const sy = shaking ? Math.round(Math.cos(this.time * 70) * 2) : 0;
+    ctx.setTransform(this.scale, 0, 0, this.scale, (offX - Math.round(this.cam.x) + sx) * this.scale, (offY - Math.round(this.cam.y) + sy) * this.scale);
     ctx.imageSmoothingEnabled = false;
 
     if (this.floor) {
@@ -595,15 +682,13 @@ export class Office {
       ctx.fillRect(0, WALL_BOTTOM, WORLD_W, WORLD_H - WALL_BOTTOM);
     }
     this.drawWall(ctx);
-    this.drawRug(ctx, 408, 420, 72, 150);
-    this.drawRug(ctx, 744, 420, 72, 150);
-
+    PROPS.filter((p) => p.flat).forEach((p) => this.drawProp(ctx, p));
     PROPS.filter((p) => p.wall).forEach((p) => this.drawProp(ctx, p));
 
     type Item = { y: number; draw: () => void };
     const items: Item[] = [];
-    PROPS.filter((p) => !p.wall).forEach((p) => items.push({ y: p.base, draw: () => this.drawProp(ctx, p) }));
-    DESKS.forEach((d) => items.push({ y: d.base, draw: () => this.drawDesk(ctx, d) }));
+    PROPS.filter((p) => !p.wall && !p.flat).forEach((p) => items.push({ y: p.base, draw: () => this.drawProp(ctx, p) }));
+    DESKS.forEach((d, i) => items.push({ y: d.base, draw: () => this.drawDesk(ctx, d, this.robots.find((r) => r.desk === i)) }));
     this.robots.forEach((r) => items.push({ y: DESKS[r.desk].base - 14, draw: () => this.drawRobot(ctx, r) }));
     items.push({ y: this.boss.y, draw: () => this.drawBoss(ctx) });
     items.sort((a, b) => a.y - b.y).forEach((i) => i.draw());
@@ -611,56 +696,18 @@ export class Office {
     if (this.night) this.drawNight(ctx);
 
     this.robots.forEach((r) => this.drawEmote(ctx, r));
+    this.drawCracks(ctx);
     this.drawSparkles(ctx);
     this.drawHighlight(ctx);
   }
 
   private drawWall(ctx: CanvasRenderingContext2D) {
-    ctx.fillStyle = "#E9E2F2";
-    ctx.fillRect(0, 0, WORLD_W, 96);
-    ctx.fillStyle = "#DED5EC";
-    for (let x = 0; x < WORLD_W; x += 12) ctx.fillRect(x, 0, 4, 96);
-    ctx.fillStyle = "#F6F1FB";
-    ctx.fillRect(0, 0, WORLD_W, 4);
-    ctx.fillStyle = "#2A1840";
-    ctx.fillRect(0, 92, WORLD_W, 4);
-    ctx.fillStyle = "#3A3260";
-    ctx.fillRect(0, 96, WORLD_W, 32);
-    ctx.fillStyle = "#4E4580";
-    for (let x = 6; x < WORLD_W; x += 48) ctx.fillRect(x, 102, 40, 20);
-    ctx.fillStyle = "#433A70";
-    for (let x = 6; x < WORLD_W; x += 48) ctx.fillRect(x + 2, 104, 36, 16);
-    ctx.fillStyle = "#2A1840";
-    ctx.fillRect(0, 124, WORLD_W, 4);
+    const wall = this.img(WALL_URL);
+    for (let x = 0; x < WORLD_W; x += wall.width) ctx.drawImage(wall, x, 0);
     ctx.fillStyle = "rgba(20,8,30,0.28)";
-    ctx.fillRect(0, 128, WORLD_W, 10);
+    ctx.fillRect(0, WALL_BOTTOM, WORLD_W, 10);
     ctx.fillStyle = "rgba(20,8,30,0.14)";
-    ctx.fillRect(0, 138, WORLD_W, 6);
-  }
-
-  private drawRug(ctx: CanvasRenderingContext2D, cx: number, cy: number, w: number, h: number) {
-    const x = Math.round(cx - w / 2), y = Math.round(cy - h / 2);
-    ctx.fillStyle = "#2A1840";
-    ctx.fillRect(x - 2, y - 2, w + 4, h + 4);
-    ctx.fillStyle = "#3A3260";
-    ctx.fillRect(x, y, w, h);
-    ctx.fillStyle = "#F5B942";
-    ctx.fillRect(x + 4, y + 4, w - 8, 2);
-    ctx.fillRect(x + 4, y + h - 6, w - 8, 2);
-    ctx.fillRect(x + 4, y + 4, 2, h - 8);
-    ctx.fillRect(x + w - 6, y + 4, 2, h - 8);
-    ctx.fillStyle = "#4E4580";
-    for (let yy = y + 14; yy < y + h - 14; yy += 16) {
-      ctx.fillRect(cx - 4, yy, 8, 8);
-      ctx.fillStyle = "#FF6B9A";
-      ctx.fillRect(cx - 2, yy + 2, 4, 4);
-      ctx.fillStyle = "#4E4580";
-    }
-    ctx.fillStyle = "#E8D9C4";
-    for (let xx = x; xx < x + w; xx += 4) {
-      ctx.fillRect(xx, y - 5, 2, 3);
-      ctx.fillRect(xx, y + h + 2, 2, 3);
-    }
+    ctx.fillRect(0, WALL_BOTTOM + 10, WORLD_W, 6);
   }
 
   private drawShadow(ctx: CanvasRenderingContext2D, x: number, y: number, w: number) {
@@ -672,7 +719,7 @@ export class Office {
 
   private drawProp(ctx: CanvasRenderingContext2D, p: PropDef) {
     const img = this.img(`/assets/objects/${p.img}.png`);
-    if (!p.wall) this.drawShadow(ctx, p.x, p.base - 2, img.width * 0.55);
+    if (!p.wall && !p.flat) this.drawShadow(ctx, p.x, p.base - 2, img.width * 0.55);
     ctx.drawImage(img, Math.round(p.x - img.width / 2), Math.round(p.base - p.bottom));
     if (p.id === "servers") {
       const blink = Math.floor(this.time * 3 + p.x) % 3;
@@ -681,10 +728,43 @@ export class Office {
     }
   }
 
-  private drawDesk(ctx: CanvasRenderingContext2D, d: Desk) {
+  private drawDesk(ctx: CanvasRenderingContext2D, d: Desk, robot?: Robot) {
     const img = this.img("/assets/objects/desk_worker.png");
     this.drawShadow(ctx, d.x, d.base - 2, 120);
     ctx.drawImage(img, Math.round(d.x - img.width / 2), Math.round(d.base - OBJECT_BOTTOM.desk_worker));
+    if (robot) this.drawPlaque(ctx, d, robot);
+  }
+
+  private drawPlaque(ctx: CanvasRenderingContext2D, d: Desk, robot: Robot) {
+    const x = Math.round(d.x - PLAQUE_W / 2);
+    const y = Math.round(d.base - PLAQUE_H + 6);
+    ctx.fillStyle = "#2A1840";
+    ctx.fillRect(x + 1, y, PLAQUE_W - 2, PLAQUE_H);
+    ctx.fillRect(x, y + 1, PLAQUE_W, PLAQUE_H - 2);
+    ctx.fillStyle = "#2B2547";
+    ctx.fillRect(x + 2, y + 2, PLAQUE_W - 4, PLAQUE_H - 4);
+    ctx.fillStyle = "#4E4580";
+    ctx.fillRect(x + 2, y + 2, PLAQUE_W - 4, 1);
+    ctx.fillStyle = "#1E1A33";
+    ctx.fillRect(x + 2, y + PLAQUE_H - 3, PLAQUE_W - 4, 1);
+    ctx.fillStyle = STATUS_COLOR[robot.state];
+    ctx.fillRect(x + 3, y + 4, 3, PLAQUE_H - 8);
+    ctx.fillStyle = "rgba(255,246,236,0.6)";
+    ctx.fillRect(x + 3, y + 4, 3, 1);
+    ctx.textBaseline = "alphabetic";
+    ctx.fillStyle = "#F5B942";
+    ctx.font = `800 10px ${ROUNDED}`;
+    ctx.fillText(this.fit(ctx, robot.project.toUpperCase(), PLAQUE_W - 18), x + 11, y + 13);
+    ctx.fillStyle = "#FFF6EC";
+    ctx.font = `600 10px ${ROUNDED}`;
+    ctx.fillText(this.fit(ctx, robot.task, PLAQUE_W - 18), x + 11, y + 25);
+  }
+
+  private fit(ctx: CanvasRenderingContext2D, text: string, width: number) {
+    if (ctx.measureText(text).width <= width) return text;
+    let cut = text;
+    while (cut.length > 1 && ctx.measureText(`${cut}…`).width > width) cut = cut.slice(0, -1).trimEnd();
+    return `${cut}…`;
   }
 
   private robotSheet(r: Robot): SheetName | null {
@@ -704,20 +784,23 @@ export class Office {
     const d = DESKS[r.desk];
     const scale = ROBOT_SCALE[r.harness];
     const feet = d.base - 14;
+    const jolt = (this.jolts.get(r.id) ?? 0) > this.time ? Math.round(Math.sin(this.time * 80) * 5) : 0;
+    const x = d.x + jolt;
     const sheet = this.robotSheet(r);
     if (sheet) {
       const meta = SHEETS[sheet];
-      const fps = r.state === "working" ? 9 : 7;
+      const boosted = (this.boosts.get(r.id) ?? 0) > this.time;
+      const fps = r.state === "working" ? (boosted ? 20 : 9) : 7;
       const frame = Math.floor(this.time * fps + r.desk * 3) % meta.frames;
       const size = meta.size * scale;
-      ctx.drawImage(this.img(sheetUrl(sheet)), frame * meta.size, 0, meta.size, meta.size, Math.round(d.x - size / 2), Math.round(feet - meta.foot * scale), size, size);
+      ctx.drawImage(this.img(sheetUrl(sheet)), frame * meta.size, 0, meta.size, meta.size, Math.round(x - size / 2), Math.round(feet - meta.foot * scale), size, size);
     } else {
       const img = this.img(stillUrl(r.harness));
       const still = STILLS[r.harness];
       const size = 128 * scale;
       const breathe = Math.round(Math.sin(this.time * 1.6 + r.desk) * 1);
       ctx.globalAlpha = 0.92;
-      ctx.drawImage(img, Math.round(d.x - size / 2), Math.round(feet - still.foot * scale) + breathe, size, size);
+      ctx.drawImage(img, Math.round(x - size / 2), Math.round(feet - still.foot * scale) + breathe, size, size);
       ctx.globalAlpha = 1;
     }
   }
@@ -725,10 +808,11 @@ export class Office {
   private drawBoss(ctx: CanvasRenderingContext2D) {
     const b = this.boss;
     this.drawShadow(ctx, b.x, b.y, 40);
-    if (b.moving) {
-      const name = `boss_walk_${b.dir}` as SheetName;
+    const whipping = this.whip !== null;
+    if (whipping || b.moving) {
+      const name = `boss_${whipping ? "whip" : "walk"}_${b.dir}` as SheetName;
       const meta = SHEETS[name];
-      const frame = Math.floor(b.anim) % meta.frames;
+      const frame = whipping ? Math.min(meta.frames - 1, Math.floor(this.whip!.t / WHIP_FRAME)) : Math.floor(b.anim) % meta.frames;
       ctx.drawImage(this.img(sheetUrl(name)), frame * meta.size, 0, meta.size, meta.size, Math.round(b.x - meta.size / 2), Math.round(b.y - meta.foot), meta.size, meta.size);
     } else {
       const img = this.img(stillUrl("boss", b.dir));
@@ -740,23 +824,51 @@ export class Office {
     const d = DESKS[r.desk];
     const head = this.robotHead(r);
     const heartUntil = this.hearts.get(r.id) ?? 0;
+    const joltUntil = this.jolts.get(r.id) ?? 0;
     let name: string | null = null;
     let bob = 0;
     if (heartUntil > this.time) {
       name = "heart";
-      bob = -Math.min(1, (heartUntil - this.time)) * 4;
+      bob = -Math.min(1, heartUntil - this.time) * 4;
+    } else if (joltUntil + 0.9 > this.time) {
+      name = "sweat";
+      bob = -Math.round((this.time - joltUntil + 0.35) * 10);
     } else if (r.state === "waiting") {
       name = "alert";
       bob = Math.round(Math.sin(this.time * 6 + r.desk) * 3);
     } else if (r.state === "done") {
       name = "sleep";
       bob = Math.round(Math.sin(this.time * 1.8) * 3);
-    } else if ((this.time + r.desk * 1.7) % 7 < 1.6) {
+    } else if ((this.boosts.get(r.id) ?? 0) > this.time || (this.time + r.desk * 1.7) % 7 < 1.6) {
       name = "dots";
     }
     if (!name) return;
     const img = this.img(`/assets/emotes/${name}.png`);
     ctx.drawImage(img, Math.round(d.x + 14), Math.round(head - 34 + bob), 40, 40);
+  }
+
+  private drawCracks(ctx: CanvasRenderingContext2D) {
+    this.cracks.forEach((c) => {
+      const p = c.t / 0.7;
+      const reach = 8 + Math.min(1, c.t / 0.25) * 22;
+      ctx.globalAlpha = 1 - Math.max(0, p - 0.5) * 2;
+      ctx.fillStyle = "#FFF6EC";
+      for (let i = 0; i < 8; i++) {
+        const a = (i / 8) * Math.PI * 2 + 0.3;
+        const len = i % 2 ? reach * 0.6 : reach;
+        for (let k = 6; k < len; k += 3) ctx.fillRect(Math.round(c.x + Math.cos(a) * k), Math.round(c.y + Math.sin(a) * k), 2, 2);
+      }
+      ctx.fillStyle = "#F5B942";
+      ctx.fillRect(Math.round(c.x) - 3, Math.round(c.y) - 3, 6, 6);
+      ctx.font = `900 18px ${ROUNDED}`;
+      ctx.textBaseline = "middle";
+      const ty = Math.round(c.y - 14 - c.t * 28);
+      ctx.fillStyle = "#2A1840";
+      ctx.fillText("CRACK!", Math.round(c.x + 24), ty + 2);
+      ctx.fillStyle = "#F5B942";
+      ctx.fillText("CRACK!", Math.round(c.x + 24), ty);
+      ctx.globalAlpha = 1;
+    });
   }
 
   private drawSparkles(ctx: CanvasRenderingContext2D) {
@@ -772,12 +884,12 @@ export class Office {
   private drawHighlight(ctx: CanvasRenderingContext2D) {
     const target = this.nearest ?? (this.attract ? null : this.hover);
     if (!target) return;
-    const label = (target.kind === "robot" ? target.robot.project : target.prop.title).replace(/f(?=[filt])/g, "f\u200C");
+    const label = (target.kind === "robot" ? target.robot.name : target.prop.title).replace(/f(?=[filt])/g, "f\u200C");
     let x: number, y: number;
     if (target.kind === "robot") {
       const d = DESKS[target.robot.desk];
       x = d.x;
-      y = d.base + 24;
+      y = this.robotHead(target.robot) - 40;
     } else {
       const p = PROPS.find((pp) => pp.id === target.prop.id)!;
       const img = this.img(`/assets/objects/${p.img}.png`);
@@ -850,7 +962,8 @@ export class Office {
     });
     cut(576, 90, 120, 0.8);
     WINDOWS.forEach((x) => cut(x, 80, 140, 0.55));
-    cut(1088, 160, 70, 0.5);
+    cut(1000, 160, 70, 0.5);
+    cut(704, 90, 80, 0.35);
     ctx.imageSmoothingEnabled = true;
     ctx.drawImage(this.shade, 0, 0, WORLD_W, WORLD_H);
 

@@ -1,15 +1,6 @@
 import SpriteAnim from "./SpriteAnim";
 import { stillUrl } from "@/lib/sprites";
 
-const MENU = [
-  { status: "wait", title: "Migrate the database to Postgres 17", sub: "Claude Code · checkout-api · waiting" },
-  { status: "wait", title: "Rotate the staging TLS certificates", sub: "Claude Code · infra · waiting" },
-  { status: "work", title: "Speed up the nightly aggregation job", sub: "Codex · data-pipeline · working" },
-  { status: "work", title: "Rebuild the home page", sub: "Cursor · web-dashboard · working" },
-  { status: "work", title: "Fix the crash on launch", sub: "Pi · ios-app · working" },
-  { status: "done", title: "Add the Windows install section", sub: "omp · docs-site · done" },
-];
-
 export default function Moods() {
   return (
     <section className="moods" id="moods">
@@ -58,63 +49,25 @@ export default function Moods() {
         </figure>
       </div>
 
-      <div className="mac reveal">
-        <div className="mac-screen">
-          <div className="mac-menubar">
-            <span className="mac-apple" aria-hidden="true" />
-            <b>Terminal</b>
-            <span className="mac-hide">Shell</span>
-            <span className="mac-hide">Edit</span>
-            <span className="mac-hide">View</span>
-            <span className="mac-spacer" />
-            <span className="mac-extra">⚠ 2 · ◉ 3</span>
-            <span className="mac-time">Fri 23:41</span>
-          </div>
-          <div className="mac-desk">
-            <div className="mac-dropdown">
-              <p className="mac-title">THE BOSS</p>
-              <ul>
-                {MENU.map((m) => (
-                  <li key={m.title}>
-                    <i className={`dot dot-${m.status}`} />
-                    <div>
-                      <b>{m.title}</b>
-                      <span>{m.sub}</span>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-              <div className="mac-rule" />
-              <div className="mac-usage"><span>Claude Code · 5 hours</span><b className="c-ok">42 %</b></div>
-              <div className="mac-usage"><span>Codex · 5 hours</span><b className="c-warn">63 %</b></div>
-              <div className="mac-rule" />
-              <div className="mac-actions"><span>Open the office</span><span>Quit</span></div>
-            </div>
-            <div className="mac-toast">
-              <img src="/assets/AppIcon.png" alt="" />
-              <div>
-                <b>Claude Code needs you</b>
-                <span>
-                  checkout-api wants to run <code>psql -f migrations/017_pg17.sql</code>
-                </span>
-              </div>
-              <small>now</small>
-            </div>
-            <div className="mac-dock" aria-hidden="true">
-              <span className="mac-dock-app" />
-              <span className="mac-dock-app" />
-              <span className="mac-dock-icon">
-                <img src="/assets/AppIcon.png" alt="" />
-                <i>2</i>
-              </span>
-              <span className="mac-dock-app" />
-            </div>
-          </div>
+      <div className="whip reveal">
+        <div className="whip-stage" aria-hidden="true">
+          <SpriteAnim sheet="boss_whip_east" zoom={2.2} fps={11} className="whip-fox" />
+          <span className="whip-crack">CRACK!</span>
         </div>
-        <p className="mac-caption">
-          Menu bar, Dock badge and notifications. Leave the office, keep your ears open.
-        </p>
+        <div className="whip-copy">
+          <p className="eyebrow">And when they slack</p>
+          <h3>
+            Crack the <em>whip.</em>
+          </h3>
+          <ul>
+            <li><b className="c-work">Working</b> types twice as fast. For a while.</li>
+            <li><b className="c-wait">Waiting</b> jumps and drags you to its session to approve.</li>
+            <li><b className="c-done">Done</b> wakes up with a start. It had already finished.</li>
+          </ul>
+          <p className="whip-note">Press <span className="key">F</span> in front of a desk. No robots were harmed, the whiteboard just counts the cracks.</p>
+        </div>
       </div>
+
     </section>
   );
 }

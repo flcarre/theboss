@@ -34,7 +34,7 @@ export default function Rules() {
     <section className="rules" id="rules">
       <div className="rules-inner">
         <header className="section-head reveal">
-          <p className="eyebrow">04 — Learned rules</p>
+          <p className="eyebrow">05 — Learned rules</p>
           <h2>
             You&rsquo;ve said this
             <br />

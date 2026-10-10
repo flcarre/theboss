@@ -1,4 +1,4 @@
-const PATHS = ["~/.claude", "~/.codex", "~/.cursor", "~/.pi", "~/.omp"];
+const PATHS = ["~/.claude", "~/.codex", "~/.gemini", "~/.copilot", "~/.cursor", "~/.pi", "~/.omp"];
 
 export default function Privacy() {
   return (
@@ -10,7 +10,7 @@ export default function Privacy() {
           <span className="local-plaque">BOSS</span>
         </div>
         <div className="reveal">
-          <p className="eyebrow">05 — Privacy</p>
+          <p className="eyebrow">06 — Privacy</p>
           <h2>
             Nothing leaves
             <br />

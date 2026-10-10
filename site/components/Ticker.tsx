@@ -1,11 +1,9 @@
-import { HARNESS_NAME, type Harness, stillUrl } from "@/lib/sprites";
-
-const ORDER: Harness[] = ["claude", "codex", "cursor", "pi", "omp"];
+import { HARNESS_NAME, HARNESS_ORDER as ORDER, stillUrl } from "@/lib/sprites";
 
 export default function Ticker() {
-  const row = [...ORDER, ...ORDER, ...ORDER, ...ORDER];
+  const row = [...ORDER, ...ORDER, ...ORDER];
   return (
-    <section className="ticker" aria-label="Works with Claude Code, Codex, Cursor, Pi and omp">
+    <section className="ticker" aria-label="Works with Claude Code, Codex, Gemini CLI, Copilot CLI, Cursor, Pi and omp">
       <div className="ticker-track" aria-hidden="true">
         {row.map((h, i) => (
           <span key={i}>

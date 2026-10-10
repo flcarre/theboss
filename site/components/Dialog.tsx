@@ -12,9 +12,10 @@ type Props = {
   target: Target;
   onClose: () => void;
   onRobotState: (id: string, state: RobotState) => void;
+  onWhip: () => void;
 };
 
-export default function Dialog({ target, onClose, onRobotState }: Props) {
+export default function Dialog({ target, onClose, onRobotState, onWhip }: Props) {
   const [reply, setReply] = useState<string | null>(null);
   const [typed, setTyped] = useState(0);
   const [choice, setChoice] = useState(0);
@@ -65,8 +66,14 @@ export default function Dialog({ target, onClose, onRobotState }: Props) {
         ],
       };
     }
-    return { text: r.working, choices: [{ label: "Carry on", run: onClose }] };
-  }, [target, reply, onClose, answer]);
+    return {
+      text: r.working,
+      choices: [
+        { label: "Carry on", run: onClose },
+        { label: "Crack the whip", run: onWhip },
+      ],
+    };
+  }, [target, reply, onClose, answer, onWhip]);
 
   const full = page.text.length;
   const done = typed >= full;
@@ -104,9 +111,9 @@ export default function Dialog({ target, onClose, onRobotState }: Props) {
   }, [done, full, page, choice, onClose]);
 
   const isRobot = target.kind === "robot";
-  const face = isRobot ? stillUrl(target.robot.harness) : "/assets/boss_portrait.png";
-  const name = isRobot ? HARNESS_NAME[target.robot.harness] : target.prop.title;
-  const sub = isRobot ? target.robot.project : "Inner monologue";
+  const face = isRobot ? stillUrl(target.robot.harness) : "/assets/fox_portrait.png";
+  const name = isRobot ? target.robot.name : target.prop.title;
+  const sub = isRobot ? `${HARNESS_NAME[target.robot.harness]} · ${target.robot.project}` : "Inner monologue";
   const color = isRobot ? HARNESS_COLOR[target.robot.harness] : "#F5B942";
 
   return (

@@ -61,15 +61,16 @@ fouetter, Échap pour le menu. ⌘1 à ⌘6 (Ctrl+1 à Ctrl+6 sous Windows et Li
 
 ## Publier une version
 
-1. Monte la version dans `app/package.json` (l'app et les installeurs la lisent là), commite et pousse.
-2. Lance `./scripts/release.sh` : il crée et pousse le tag `vX.Y.Z`, puis déclenche le workflow `Release` du repo public
-   `flcarre/theboss-releases`. Celui-ci récupère le code de ce repo au tag donné, lance les tests du cœur, construit les
-   installeurs sur macOS, Windows et Linux, puis les publie dans ses releases avec des noms fixes : les liens du site
-   (`releases/latest/download/...`) pointent toujours sur la dernière version.
-3. Le build tourne dans le repo public parce que GitHub Actions y est gratuit, macOS et Windows compris. Il lit ce repo
-   privé avec une clé de déploiement en lecture seule, rangée dans le secret `SOURCE_DEPLOY_KEY` de `theboss-releases`.
-   Pour signer et notariser l'app macOS plus tard, ajoute à ce même repo les secrets `APPLE_CERTIFICATE`,
-   `APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY`, `APPLE_ID`, `APPLE_PASSWORD` et `APPLE_TEAM_ID`.
+1. Monte la version dans `app/package.json` (l'app et les installeurs la lisent là), commite.
+2. Lance `mise exec rust -- ./scripts/release.sh`. Tout se construit sur ce Mac, sans GitHub Actions :
+   - `scripts/build-macos.sh` : `.dmg` universel (Apple Silicon et Intel) ;
+   - `scripts/build-windows.sh` : `.exe` NSIS, compilé avec `cargo-xwin` ; `makensis` tourne dans Docker
+     (`scripts/tools/makensis`) car celui de Homebrew plante sur macOS ;
+   - `scripts/build-linux.sh` : `.AppImage` et `.deb`, construits dans un conteneur Ubuntu 22.04 x86_64 (émulé, donc lent).
+   Le script pousse ensuite le tag `vX.Y.Z` et publie les installeurs dans le repo public `flcarre/theboss-releases`
+   avec des noms fixes : les liens du site (`releases/latest/download/...`) pointent toujours sur la dernière version.
+3. Prérequis, une fois : Docker lancé, `brew install llvm lld`, `cargo install --locked cargo-xwin`,
+   `rustup target add x86_64-apple-darwin x86_64-pc-windows-msvc` (via `mise exec rust --`).
 
 ## Site vitrine
 
@@ -93,7 +94,7 @@ app/src/game/        Moteur du jeu en canvas : salles, personnages, fouet
 app/src/ui/          Interface React : HUD, dialogues, menu, écrans
 app/public/assets/   Sprites PixelLab (personnages, meubles, icônes) ; sols, bulles et effets sont dessinés en code
 design/pixellab.json Identifiants PixelLab de chaque sprite
-scripts/release.sh   Tag + build des installeurs dans flcarre/theboss-releases
+scripts/             build-macos/windows/linux.sh, release.sh (installeurs construits en local)
 ```
 
 ## Direction artistique

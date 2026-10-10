@@ -3,7 +3,7 @@ mod state;
 mod tray;
 mod workers;
 
-use tauri::{RunEvent, WindowEvent};
+use tauri::WindowEvent;
 
 pub fn run() {
     let app = tauri::Builder::default()
@@ -47,7 +47,7 @@ pub fn run() {
 
     app.run(|handle, event| match event {
         #[cfg(target_os = "macos")]
-        RunEvent::Reopen { .. } => tray::show_main(handle),
+        tauri::RunEvent::Reopen { .. } => tray::show_main(handle),
         _ => {
             let _ = handle;
         }

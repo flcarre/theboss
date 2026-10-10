@@ -5,7 +5,7 @@ import SpriteKit
 import UserNotifications
 
 enum Panel: Equatable {
-    case overview, usage, library, inbox, analytics, settings
+    case overview, usage, library, inbox, analytics, settings, domain
     case robot(String)
 }
 
@@ -29,6 +29,7 @@ enum MenuEntry: String, CaseIterable, Identifiable {
     case usage = "Usage"
     case rules = "Règles"
     case stats = "Stats"
+    case domain = "Domaine"
     case settings = "Réglages"
     case close = "Retour"
 
@@ -41,6 +42,7 @@ enum MenuEntry: String, CaseIterable, Identifiable {
         case .usage: "tbfc/icons/icones_ecrans_classement.png"
         case .rules: "tbfc/icons/icones_ecrans_quetes.png"
         case .stats: "tbfc/icons/icones_ecrans_succes.png"
+        case .domain: "tbfc/icons/icones_ecrans_carte.png"
         case .settings: "tbfc/icons/icones_ecrans_parametres.png"
         case .close: "tbfc/icons/icones_actions_retour.png"
         }
@@ -99,6 +101,19 @@ final class GameModel: ObservableObject, WorldSceneDelegate {
 
     @Published var refining: Set<String> = []
     @Published var repairingClaude = false
+
+    func openClaudeLogin() {
+        let script = Paths.appSupport.appendingPathComponent("claude-login.command")
+        let claude = RuleWriter.claudeExecutable() ?? "claude"
+        let body = "#!/bin/sh\n\(SessionLauncher.shellQuote(claude)) auth login\necho\necho \"Tu peux fermer cette fenêtre et revenir dans The Boss.\"\n"
+        do {
+            try body.write(to: script, atomically: true, encoding: .utf8)
+            try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: script.path)
+            NSWorkspace.shared.open(script)
+        } catch {
+            showToast("Impossible d'ouvrir le Terminal : \(error.localizedDescription)")
+        }
+    }
 
     func repairClaudeUsage() {
         guard !repairingClaude else { return }
@@ -293,6 +308,28 @@ final class GameModel: ObservableObject, WorldSceneDelegate {
         }
     }
 
+    var domainProjects: [String] { DomainModelBuilder.projects(from: sessions) }
+
+    func domainModel(root: String) -> DomainModel {
+        DomainModelBuilder.build(root: root, intent: store.setting("intent:\(root)") ?? "", sessions: sessions, suggestions: suggestions)
+    }
+
+    func saveIntent(_ intent: String, root: String) {
+        store.setSetting("intent:\(root)", intent)
+    }
+
+    func exportDomain(_ model: DomainModel) {
+        let url = URL(fileURLWithPath: model.exportPath)
+        do {
+            try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try model.markdown.write(to: url, atomically: true, encoding: .utf8)
+            showToast("Modèle écrit dans \(model.name)/.boss/domain.md")
+            play("Glass")
+        } catch {
+            showToast("Écriture impossible : \(error.localizedDescription)")
+        }
+    }
+
     func messages(for session: AgentSession) -> [TranscriptMessage] {
         monitor.messages(for: session)
     }
@@ -316,6 +353,7 @@ final class GameModel: ObservableObject, WorldSceneDelegate {
         case .library: open(.library)
         case .analytics: open(.analytics)
         case .overview: open(.overview)
+        case .archives: open(.domain)
         case .inbox:
             if !insightsReady {
                 say(nil, ["Le facteur trie encore le courrier… (analyse de tes conversations en cours)"])
@@ -440,6 +478,7 @@ final class GameModel: ObservableObject, WorldSceneDelegate {
         case .usage: open(.usage)
         case .rules: open(.library)
         case .stats: open(.analytics)
+        case .domain: open(.domain)
         case .settings: open(.settings)
         case .close: play("Tink")
         }

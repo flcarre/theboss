@@ -15,6 +15,7 @@ dans ton bureau, puis dans l'open space où chaque session d'agent est un robot 
 | Bibliothèque | Fichiers cachés qui pilotent les agents : CLAUDE.md, AGENTS.md, règles Cursor, skills, hooks, sous-agents, commandes, réglages |
 | Bannette à courrier | Suggestions avec preuves et diff exact : règles apprises de tes corrections, réglages cassés à réparer ; appliquer, garder pour plus tard, ignorer |
 | Tableau blanc | Stats : corrections pour 100 prompts par jour, tendance (le setup s'améliore ou se dégrade) |
+| Armoire d'archives | Modèle du domaine local, une source de vérité par projet : intention, conventions écrites, décisions apprises, travaux récents, divergences entre CLAUDE.md et AGENTS.md ; export vers `.boss/domain.md` avec diff |
 | Barre des menus, Dock, notifications | Compteurs, alerte quand un robot attend ou finit |
 
 Tout reste en local : l'app lit `~/.claude`, `~/.codex`, `~/.cursor`, `~/.pi` et `~/.omp`, et range

@@ -220,4 +220,23 @@ struct BossCoreTests {
         #expect(windows.first?.usedPercent == 50)
         #expect(windows.first?.resetsAt != nil)
     }
+
+    @Test func buildsLocalDomainModel() throws {
+        let home = try makeHome()
+        let project = home.appendingPathComponent("shop")
+        try FileManager.default.createDirectory(at: project.appendingPathComponent(".git"), withIntermediateDirectories: true)
+        try write("# Shop\n\n- Use pnpm for everything.\n- Prices are stored in cents.\n\n## Règles apprises\n\n- Toujours écrire le test d'abord.\n",
+                  to: project.appendingPathComponent("CLAUDE.md"))
+        try write("- Use pnpm for everything.\n", to: project.appendingPathComponent("AGENTS.md"))
+        let session = AgentSession(harness: .codex, sessionId: "c", title: "Checkout refactor", cwd: project.appendingPathComponent("src").path,
+                                   status: .working, updatedAt: Date())
+        let model = DomainModelBuilder.build(root: project.path, intent: "Sell socks.", sessions: [session], suggestions: [])
+        #expect(model.conventions.map(\.text).contains("Prices are stored in cents."))
+        #expect(model.decisions.map(\.text) == ["Toujours écrire le test d'abord."])
+        #expect(model.activity.map(\.text) == ["Checkout refactor"])
+        #expect(model.agents[.codex] == 1)
+        #expect(model.conflicts.count == 1)
+        #expect(model.markdown.contains("## Intention\n\nSell socks."))
+        #expect(DomainModelBuilder.projects(from: [session]) == [project.path])
+    }
 }

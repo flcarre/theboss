@@ -5,7 +5,7 @@ enum RoomID: String {
 }
 
 enum Interaction: Equatable {
-    case usage, library, inbox, analytics, overview, coffee, water, sofa, servers, window, plant
+    case usage, library, inbox, analytics, overview, archives, coffee, water, sofa, servers, window, plant
     case robot(slot: Int)
 }
 
@@ -102,6 +102,8 @@ struct Room {
                  blocks: [Tile(c: 1, r: 6)], interaction: .inbox),
             Prop(name: "Plante", texture: "tbfc/decor/decor_interieur_plante_en_pot.png", x: 0.5, baseY: 6.0,
                  blocks: [Tile(c: 0, r: 6)], interaction: .plant),
+            Prop(name: "Archives", texture: "objects/archive_cabinet.png", x: 3.5, baseY: 6.0,
+                 blocks: [Tile(c: 3, r: 6)], interaction: .archives),
             Prop(name: "Plante", texture: "tbfc/decor/decor_interieur_plante_en_pot.png", x: 11.5, baseY: 6.0,
                  blocks: [Tile(c: 11, r: 6)], interaction: .plant),
             Prop(name: "Tapis", texture: "tbfc/decor/decor_interieur_tapis.png", x: 6.0, baseY: 1.55, flat: true),

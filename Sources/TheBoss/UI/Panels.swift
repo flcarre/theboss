@@ -40,6 +40,7 @@ struct PanelHost: View {
         case .inbox: InboxPanel(model: model)
         case .analytics: AnalyticsPanel(model: model)
         case .settings: SettingsPanel(model: model)
+        case .domain: DomainPanel(model: model)
         case .robot(let id): RobotPanel(model: model, sessionId: id)
         }
     }
@@ -52,6 +53,7 @@ struct PanelHost: View {
         case .inbox: "Courrier · Suggestions"
         case .analytics: "Tableau blanc · Stats"
         case .settings: "Réglages"
+        case .domain: "Archives · Modèle du domaine"
         case .robot(let id): model.session(id: id).map { RobotName.of($0) + " · journal" } ?? "Journal"
         }
     }
@@ -64,6 +66,7 @@ struct PanelHost: View {
         case .inbox: "tbfc/icons/icones_ecrans_messages.png"
         case .analytics: "tbfc/icons/icones_ecrans_succes.png"
         case .settings: "tbfc/icons/icones_ecrans_parametres.png"
+        case .domain: "tbfc/icons/icones_ecrans_carte.png"
         case .robot: "tbfc/icons/icones_ecrans_album.png"
         }
     }

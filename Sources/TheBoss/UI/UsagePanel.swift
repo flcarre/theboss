@@ -78,9 +78,16 @@ struct ProviderCard: View {
                     if model.repairingClaude {
                         Text("Claude Code se reconnecte…").font(Theme.pixel(13)).foregroundStyle(Theme.ink.opacity(0.6))
                     } else {
-                        PixelButton(title: "Réparer automatiquement") { model.repairClaudeUsage() }
-                            .help("Lance Claude Code une fois en local (modèle Haiku) : il rafraîchit son jeton dans le trousseau.")
+                        HStack {
+                            PixelButton(title: "Réparer automatiquement") { model.repairClaudeUsage() }
+                                .help("Lance Claude Code une fois en local (modèle Haiku) : il rafraîchit son jeton dans le trousseau.")
+                            PixelButton(title: "Se reconnecter", color: Theme.paper) { model.openClaudeLogin() }
+                                .help("Ouvre le Terminal sur claude auth login.")
+                        }
                     }
+                }
+                if provider.harness == .claude && provider.state == .signedOut {
+                    PixelButton(title: "Se reconnecter") { model.openClaudeLogin() }
                 }
                 if provider.state == .keychainBlocked {
                     PixelButton(title: "Ouvrir Trousseaux d'accès", color: Theme.paper) {

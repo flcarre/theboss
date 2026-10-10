@@ -53,7 +53,7 @@ public struct RulesInventory: Sendable {
         return items.filter { seen.insert($0.id).inserted }
     }
 
-    static func projectRoot(_ cwd: String) -> String {
+    public static func projectRoot(_ cwd: String) -> String {
         guard !cwd.isEmpty else { return "" }
         if let range = cwd.range(of: "/.claude/worktrees/") {
             return String(cwd[..<range.lowerBound])
@@ -174,7 +174,7 @@ public struct RulesInventory: Sendable {
         return file(url, kind: .hook, harness: .codex, scope: scope)
     }
 
-    static func summary(of content: String) -> String {
+    public static func summary(of content: String) -> String {
         var body = content
         if body.hasPrefix("---"), let end = body.range(of: "\n---", range: body.index(body.startIndex, offsetBy: 3)..<body.endIndex) {
             let front = String(body[body.startIndex..<end.lowerBound])

@@ -35,6 +35,7 @@ enum DebugDriver {
                     case "analytics": model.open(.analytics)
                     case "overview": model.open(.overview)
                     case "settings": model.open(.settings)
+                    case "domain": model.open(.domain)
                     case "robot": if let first = model.sessions.first { model.open(.robot(first.id)) }
                     default: model.closePanel()
                     }

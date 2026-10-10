@@ -1,0 +1,110 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+env:
+  RELEASES_REPO: flcarre/theboss-releases
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            label: macOS
+            args: --target universal-apple-darwin --bundles app,dmg
+            rust_targets: aarch64-apple-darwin,x86_64-apple-darwin
+          - os: windows-latest
+            label: Windows
+            args: --bundles nsis
+            rust_targets: ""
+          - os: ubuntu-22.04
+            label: Linux
+            args: --bundles appimage,deb
+            rust_targets: ""
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust_targets }}
+      - uses: Swatinem/rust-cache@v2
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - run: npm ci
+        working-directory: app
+
+      - name: Enable macOS signing when certificates are configured
+        if: runner.os == 'macOS'
+        shell: bash
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          if [ -n "$APPLE_CERTIFICATE" ]; then
+            for name in APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD APPLE_SIGNING_IDENTITY APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID; do
+              {
+                echo "$name<<EOF_SECRET"
+                printenv "$name"
+                echo "EOF_SECRET"
+              } >> "$GITHUB_ENV"
+            done
+          fi
+
+      - name: Build
+        working-directory: app
+        shell: bash
+        run: npx tauri build ${{ matrix.args }}
+
+      - name: Collect installers
+        shell: bash
+        run: node scripts/collect-installers.mjs "${{ matrix.label }}" dist-installers
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installers-${{ matrix.label }}
+          path: dist-installers/*
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: installers-*
+          path: dist-installers
+          merge-multiple: true
+      - name: Publish to the public releases repository
+        env:
+          GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
+        run: |
+          version="v$(node -p "require('./app/package.json').version")"
+          cd dist-installers
+          sha256sum * > SHA256SUMS.txt
+          gh release delete "$version" --repo "$RELEASES_REPO" --yes --cleanup-tag 2>/dev/null || true
+          gh release create "$version" * \
+            --repo "$RELEASES_REPO" \
+            --title "The Boss $version" \
+            --notes "Download The Boss for macOS (Apple Silicon and Intel), Windows or Linux. See https://theboss-iota.vercel.app for install notes." \
+            --latest

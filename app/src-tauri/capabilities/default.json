@@ -1,0 +1,14 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "core:window:allow-set-badge-count",
+    "notification:default",
+    "clipboard-manager:allow-write-text",
+    "opener:default",
+    { "identifier": "opener:allow-open-path", "allow": [{ "path": "**" }] },
+    "opener:allow-reveal-item-in-dir"
+  ]
+}

@@ -3,3 +3,5 @@ build/
 .swiftpm/
 *.xcodeproj
 .DS_Store
+target/
+.gstack/

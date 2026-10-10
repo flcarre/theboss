@@ -23,7 +23,7 @@ export default function Staff() {
         </h2>
         <p className="lede">
           The Boss reads each agent&rsquo;s own session files on disk. No plugin to install, no wrapper around your
-          terminal. If it ran on this Mac in the last twelve hours, it has a desk.
+          terminal. If it ran on this computer in the last twelve hours, it has a desk.
         </p>
       </header>
 

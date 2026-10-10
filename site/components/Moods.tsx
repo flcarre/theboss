@@ -33,7 +33,7 @@ export default function Moods() {
           <figcaption>
             <span className="mood-tag tag-wait">Needs you</span>
             <h3>Waving at you.</h3>
-            <p>It wants to run something and needs your OK. A notification pops, the Dock badge ticks up, and it keeps waving until you show up.</p>
+            <p>It wants to run something and needs your OK. A notification pops, the app badge ticks up, and it keeps waving until you show up.</p>
           </figcaption>
         </figure>
         <figure className="mood">

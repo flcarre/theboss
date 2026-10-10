@@ -2439,83 +2439,74 @@ h2 {
   align-items: start;
 }
 
-.term {
-  background: #0b0916;
-  border: 3px solid var(--ink);
-  box-shadow: 0 0 0 2px var(--line), 14px 14px 0 #07060e;
+.downloads {
+  display: grid;
+  gap: 22px;
 }
 
-.term-bar {
+.download {
+  padding: 24px 26px 22px;
+  background: var(--base);
+  box-shadow: 0 0 0 3px var(--ink), inset 0 0 0 2px var(--line);
+}
+
+.download-mine {
+  background: var(--raised);
+  box-shadow: 0 0 0 3px var(--ink), inset 0 0 0 2px var(--gold), 10px 10px 0 #07060e;
+}
+
+.download-head {
   display: flex;
   align-items: center;
-  gap: 7px;
-  padding: 10px 14px;
-  border-bottom: 2px solid var(--line);
+  gap: 14px;
+}
+
+.download-head h3 {
+  margin: 0;
   font-family: var(--pixel);
-  font-size: 13px;
-  color: var(--muted);
-}
-
-.term-bar i {
-  width: 10px;
-  height: 10px;
-  background: var(--line);
-}
-
-.term-bar i:first-child {
-  background: var(--pink);
-}
-
-.term-bar i:nth-child(2) {
-  background: var(--gold);
-}
-
-.term-bar i:nth-child(3) {
-  background: var(--ok);
-}
-
-.term-bar span {
-  margin-left: 10px;
-  flex: 1;
-}
-
-.term-copy {
-  padding: 3px 10px;
-  border: 0;
-  background: var(--raised);
+  font-size: 22px;
+  font-weight: 600;
   color: var(--cream);
-  font-family: var(--pixel);
-  font-size: 13px;
-  cursor: pointer;
 }
 
-.term-copy:hover {
+.download-badge {
+  padding: 2px 10px 3px;
   background: var(--gold);
   color: var(--ink);
+  font-family: var(--pixel);
+  font-size: 13px;
 }
 
-.term-body {
-  margin: 0;
-  padding: 22px 22px 26px;
-  font-family: var(--mono);
+.download-detail {
+  margin: 6px 0 18px;
   font-size: 15px;
-  line-height: 1.8;
-  color: var(--cream);
-  overflow-x: auto;
-}
-
-.term-body > span {
-  display: block;
-  white-space: pre;
-}
-
-.t-c {
   color: var(--muted);
 }
 
-.t-p {
-  color: var(--ok);
-  user-select: none;
+.download-builds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+}
+
+.download-builds small {
+  font-size: 13px;
+  font-weight: 500;
+  opacity: 0.7;
+}
+
+.download-note {
+  margin: 16px 0 0;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.downloads .fineprint {
+  margin-top: 4px;
+}
+
+.downloads .fineprint a {
+  color: var(--gold);
 }
 
 .controls {
@@ -2866,8 +2857,12 @@ h2 {
     font-size: 12px;
   }
 
-  .term-body {
-    font-size: 13px;
+  .download {
+    padding: 20px 18px;
+  }
+
+  .download-builds .btn {
+    white-space: normal;
   }
 }
 

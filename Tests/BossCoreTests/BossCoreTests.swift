@@ -18,6 +18,23 @@ func jsonLine(_ object: [String: Any]) -> String {
     String(data: try! JSONSerialization.data(withJSONObject: object), encoding: .utf8)!
 }
 
+final class StubProtocol: URLProtocol {
+    nonisolated(unsafe) static var status = 200
+    nonisolated(unsafe) static var body = Data()
+    nonisolated(unsafe) static var lastAuthorization: String?
+
+    override class func canInit(with request: URLRequest) -> Bool { true }
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+    override func startLoading() {
+        Self.lastAuthorization = request.value(forHTTPHeaderField: "Authorization")
+        let response = HTTPURLResponse(url: request.url!, statusCode: Self.status, httpVersion: nil, headerFields: nil)!
+        client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+        client?.urlProtocol(self, didLoad: Self.body)
+        client?.urlProtocolDidFinishLoading(self)
+    }
+    override func stopLoading() {}
+}
+
 @Suite(.serialized)
 struct BossCoreTests {
     @Test func detectsCorrectionsAndExtractsRules() {
@@ -262,5 +279,32 @@ struct BossCoreTests {
         #expect(pi.status == .working)
         #expect(sessions.contains { $0.harness == .omp && $0.sessionId == "pi-1" })
         #expect(sessions.contains { $0.harness == .cursor && $0.status == .working })
+    }
+
+    @Test func claudeUsageGaugeEndToEndWithStubbedApi() async throws {
+        _ = try makeHome()
+        try FileManager.default.createDirectory(at: Paths.claude, withIntermediateDirectories: true)
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [StubProtocol.self]
+        let credentials = Data(#"{"claudeAiOauth":{"accessToken":"tok-123","expiresAt":4102444800000,"subscriptionType":"team"}}"#.utf8)
+        StubProtocol.status = 200
+        StubProtocol.body = Data(#"{"five_hour":{"utilization":37,"resets_at":"2026-10-10T12:00:00Z"},"seven_day":{"utilization":12,"resets_at":"2026-10-14T00:00:00Z"}}"#.utf8)
+        let service = UsageService(monitor: AgentMonitor(), liveMonitor: nil, session: URLSession(configuration: configuration),
+                                   readCredentials: { .found(credentials) })
+        let report = await service.report(force: true)
+        let claude = try #require(report.providers.first { $0.harness == .claude })
+        #expect(claude.state == .ok)
+        #expect(claude.plan == "team")
+        #expect(claude.windows.map(\.usedPercent) == [37, 12])
+        #expect(StubProtocol.lastAuthorization == "Bearer tok-123")
+
+        StubProtocol.status = 401
+        let expired = await UsageService(monitor: AgentMonitor(), liveMonitor: nil, session: URLSession(configuration: configuration),
+                                         readCredentials: { .found(credentials) }).report(force: true)
+        #expect(expired.providers.first { $0.harness == .claude }?.state == .tokenExpired)
+
+        let missing = await UsageService(monitor: AgentMonitor(), liveMonitor: nil, session: URLSession(configuration: configuration),
+                                         readCredentials: { .missing }).report(force: true)
+        #expect(missing.providers.first { $0.harness == .claude }?.state == .signedOut)
     }
 }

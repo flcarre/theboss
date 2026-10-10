@@ -102,8 +102,15 @@ public final class UsageService: @unchecked Sendable {
     private var backoffUntil: Date?
     static let throttledPrefix = "Anthropic limite"
     private let session: URLSession
+    private let readCredentials: () -> KeychainResult
 
-    public init(monitor: AgentMonitor, liveMonitor: AgentMonitor? = nil, session: URLSession = .shared) {
+    public convenience init(monitor: AgentMonitor, liveMonitor: AgentMonitor? = nil, session: URLSession = .shared) {
+        self.init(monitor: monitor, liveMonitor: liveMonitor, session: session,
+                  readCredentials: { UsageService.readKeychain(servicePrefix: "Claude Code-credentials") })
+    }
+
+    init(monitor: AgentMonitor, liveMonitor: AgentMonitor?, session: URLSession, readCredentials: @escaping () -> KeychainResult) {
+        self.readCredentials = readCredentials
         self.monitor = monitor
         self.liveMonitor = liveMonitor ?? monitor
         self.session = session
@@ -163,7 +170,7 @@ public final class UsageService: @unchecked Sendable {
 
     private func fetchClaude() async -> ProviderUsage {
         if cachedCredentials == nil {
-            switch Self.readKeychain(servicePrefix: "Claude Code-credentials") {
+            switch readCredentials() {
             case .missing:
                 return ProviderUsage(harness: .claude, state: .signedOut)
             case .blocked:

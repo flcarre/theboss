@@ -47,6 +47,9 @@ enum DebugDriver {
                     }
                 case "snap":
                     snapshot(name: parts[safe: 1] ?? "snap", to: outDir)
+                case "apply":
+                    let title = parts.dropFirst().joined(separator: ":")
+                    if let target = model.openSuggestions.first(where: { $0.title.contains(title) }) { model.setStatus(.applied, for: target) }
                 case "repair":
                     model.repairClaudeUsage()
                 case "refine":

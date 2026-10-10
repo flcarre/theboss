@@ -312,4 +312,19 @@ struct BossCoreTests {
                                          readCredentials: { .missing }).report(force: true)
         #expect(missing.providers.first { $0.harness == .claude }?.state == .signedOut)
     }
+
+    @Test func readsCursorSummaryAndUtf16Tokens() {
+        let summary = Data(#"{"billingCycleEnd":"2026-11-01T00:00:00.000Z","membershipType":"pro","individualUsage":{"plan":{"used":1200,"limit":2000,"autoPercentUsed":40,"apiPercentUsed":80},"onDemand":{"used":500,"limit":1000}}}"#.utf8)
+        let parsed = UsageService.parseCursorSummary(summary)
+        #expect(parsed?.plan == "pro")
+        #expect(parsed?.windows.map(\.usedPercent) == [60, 50])
+        #expect(parsed?.windows.first?.resetsAt != nil)
+        let utf16 = "abc.def.ghi".data(using: .utf16LittleEndian)!
+        #expect(CursorAuth.decode(utf16) == "abc.def.ghi")
+        #expect(CursorAuth.decode(Data("\"abc.def\"".utf8)) == "abc.def")
+        let expired = "h." + Data(#"{"sub":"auth0|u1","exp":1000}"#.utf8).base64EncodedString().replacingOccurrences(of: "=", with: "") + ".s"
+        let valid = "h." + Data(#"{"sub":"auth0|u1","exp":4102444800}"#.utf8).base64EncodedString().replacingOccurrences(of: "=", with: "") + ".s"
+        #expect(!CursorAuth.isUsable(expired))
+        #expect(CursorAuth.isUsable(valid))
+    }
 }

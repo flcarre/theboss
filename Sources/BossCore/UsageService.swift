@@ -208,30 +208,65 @@ public final class UsageService: @unchecked Sendable {
         }
     }
 
-    static var cursorStateDatabase: URL {
-        Paths.home.appendingPathComponent("Library/Application Support/Cursor/User/globalStorage/state.vscdb")
-    }
-
     func cursorUsage() async -> ProviderUsage? {
-        guard FileManager.default.fileExists(atPath: Self.cursorStateDatabase.path) else { return nil }
-        guard let token = CursorAuth.accessToken(database: Self.cursorStateDatabase), let user = CursorAuth.userId(fromJWT: token) else {
-            return ProviderUsage(harness: .cursor, state: .failed("Cursor n'est pas connecté."))
+        guard CursorAuth.isInstalled else { return nil }
+        guard let token = CursorAuth.usableToken(), let user = CursorAuth.userId(fromJWT: token) else {
+            return ProviderUsage(harness: .cursor, state: .failed("Cursor n'est pas connecté (ou sa session a expiré) : ouvre Cursor pour te reconnecter."))
         }
-        var components = URLComponents(string: "https://cursor.com/api/usage")!
-        components.queryItems = [URLQueryItem(name: "user", value: user)]
-        var request = URLRequest(url: components.url!)
-        request.setValue("WorkosCursorSessionToken=\(user)%3A%3A\(token)", forHTTPHeaderField: "Cookie")
-        request.timeoutInterval = 15
+        let cookie = "WorkosCursorSessionToken=\(user)%3A%3A\(token)"
         do {
-            let (data, response) = try await session.data(for: request)
-            guard (response as? HTTPURLResponse)?.statusCode == 200 else {
-                return ProviderUsage(harness: .cursor, state: .failed("Cursor refuse la lecture de l'usage."))
+            let (summaryData, summaryCode) = try await cursorGet("https://cursor.com/api/usage-summary", cookie: cookie)
+            if summaryCode == 401 || summaryCode == 403 {
+                return ProviderUsage(harness: .cursor, state: .failed("Cursor refuse la session : reconnecte-toi dans Cursor."))
             }
-            let windows = Self.parseCursorWindows(data)
+            if summaryCode == 200, let parsed = Self.parseCursorSummary(summaryData), !parsed.windows.isEmpty {
+                return ProviderUsage(harness: .cursor, state: .ok, plan: parsed.plan, windows: parsed.windows, observedAt: Date())
+            }
+            let (legacyData, legacyCode) = try await cursorGet("https://cursor.com/api/usage?user=\(user)", cookie: cookie)
+            guard legacyCode == 200 else {
+                return ProviderUsage(harness: .cursor, state: .failed("Réponse HTTP \(legacyCode) de Cursor."))
+            }
+            let windows = Self.parseCursorWindows(legacyData)
             return ProviderUsage(harness: .cursor, state: windows.isEmpty ? .noData : .ok, windows: windows, observedAt: Date())
         } catch {
             return ProviderUsage(harness: .cursor, state: .failed("Réseau indisponible : \(error.localizedDescription)"))
         }
+    }
+
+    private func cursorGet(_ url: String, cookie: String) async throws -> (Data, Int) {
+        var request = URLRequest(url: URL(string: url)!)
+        request.setValue(cookie, forHTTPHeaderField: "Cookie")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.timeoutInterval = 15
+        let (data, response) = try await session.data(for: request)
+        return (data, (response as? HTTPURLResponse)?.statusCode ?? 0)
+    }
+
+    static func parseCursorSummary(_ data: Data) -> (plan: String?, windows: [RateWindow])? {
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return nil }
+        let reset = ISODate.parse(json["billingCycleEnd"])
+        let individual = json["individualUsage"] as? [String: Any]
+        let plan = individual?["plan"] as? [String: Any]
+        func number(_ dict: [String: Any]?, _ key: String) -> Double? { (dict?[key] as? NSNumber)?.doubleValue }
+        func ratio(_ dict: [String: Any]?) -> Double? {
+            guard let used = number(dict, "used"), let limit = number(dict, "limit"), limit > 0 else { return nil }
+            return used / limit * 100
+        }
+        var windows: [RateWindow] = []
+        let auto = number(plan, "autoPercentUsed")
+        let api = number(plan, "apiPercentUsed")
+        let planPercent = number(plan, "totalPercentUsed")
+            ?? ((auto != nil && api != nil) ? (auto! + api!) / 2 : (api ?? auto))
+            ?? ratio(plan)
+            ?? ratio(individual?["overall"] as? [String: Any])
+            ?? ratio((json["teamUsage"] as? [String: Any])?["pooled"] as? [String: Any])
+        if let planPercent {
+            windows.append(RateWindow(label: "Forfait du mois", usedPercent: min(100, max(0, planPercent)), resetsAt: reset, windowMinutes: nil))
+        }
+        if let onDemand = ratio(individual?["onDemand"] as? [String: Any]) {
+            windows.append(RateWindow(label: "À la demande", usedPercent: min(100, max(0, onDemand)), resetsAt: reset, windowMinutes: nil))
+        }
+        return (json["membershipType"] as? String, windows)
     }
 
     static func parseCursorWindows(_ data: Data) -> [RateWindow] {

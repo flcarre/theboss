@@ -261,11 +261,16 @@ struct BossCoreTests {
         let home = try makeHome()
         let now = ISO8601DateFormatter().string(from: Date())
         let lines = [
-            jsonLine(["type": "session", "id": "pi-1", "timestamp": now, "cwd": "/work/api"]),
-            jsonLine(["type": "message", "timestamp": now, "message": ["role": "user", "content": [["type": "text", "text": "Ajoute la pagination"]]]]),
-            jsonLine(["type": "message", "timestamp": now, "message": ["role": "assistant", "model": "gpt-x",
+            jsonLine(["type": "session", "version": 3, "id": "pi-1", "timestamp": now, "cwd": "/work/api"]),
+            jsonLine(["type": "message", "id": "a0", "parentId": NSNull(), "timestamp": now,
+                      "message": ["role": "system", "content": "", "sections": ["preamble": "You are an expert coding assistant"]]]),
+            jsonLine(["type": "message", "id": "a1", "parentId": "a0", "timestamp": now, "message": ["role": "user", "content": "Ajoute la pagination", "timestamp": 1]]),
+            jsonLine(["type": "message", "id": "a2", "parentId": "a1", "timestamp": now, "message": ["role": "assistant", "model": "gpt-x",
+                      "api": "openai-responses", "provider": "openai", "stopReason": "toolUse",
                       "content": [["type": "toolCall", "id": "call1", "name": "bash", "arguments": ["command": "npm test"]]],
-                      "usage": ["input": 100, "output": 20, "cacheRead": 5, "cacheWrite": 0]]]),
+                      "usage": ["input": 100, "output": 20, "cacheRead": 5, "cacheWrite": 0, "totalTokens": 125]]]),
+            jsonLine(["type": "usage", "id": "a3", "parentId": "a2", "timestamp": now, "kind": "cache_warm", "provider": "openai", "model": "gpt-x",
+                      "usage": ["input": 0, "output": 0, "cacheRead": 50, "cacheWrite": 0]]),
         ]
         try write(lines.joined(separator: "\n") + "\n", to: home.appendingPathComponent(".pi/agent/sessions/--work-api--/s.jsonl"))
         try write(lines.joined(separator: "\n") + "\n", to: home.appendingPathComponent(".omp/agent/sessions/--work-api--/s.jsonl"))
@@ -274,7 +279,7 @@ struct BossCoreTests {
         let pi = try #require(sessions.first { $0.harness == .pi })
         #expect(pi.cwd == "/work/api")
         #expect(pi.title == "Ajoute la pagination")
-        #expect(pi.tokens.total == 125)
+        #expect(pi.tokens.total == 175)
         #expect(pi.model == "gpt-x")
         #expect(pi.status == .working)
         #expect(sessions.contains { $0.harness == .omp && $0.sessionId == "pi-1" })

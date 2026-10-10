@@ -78,6 +78,11 @@ final class PiSource {
         return state
     }
 
+    static func tokens(_ usage: [String: Any]) -> TokenUsage {
+        TokenUsage(input: usage["input"] as? Int ?? 0, output: usage["output"] as? Int ?? 0,
+                   cacheRead: usage["cacheRead"] as? Int ?? 0, cacheWrite: usage["cacheWrite"] as? Int ?? 0)
+    }
+
     private func consume(_ object: [String: Any], into state: inout TranscriptState) {
         let date = ISODate.parse(object["timestamp"])
         state.touch(date)
@@ -89,6 +94,8 @@ final class PiSource {
             if let name = object["name"] as? String { state.title = name }
         case "model_change":
             if let model = object["modelId"] as? String { state.model = model }
+        case "usage", "compaction", "branch_summary":
+            if let usage = object["usage"] as? [String: Any] { state.addUsage(Self.tokens(usage), at: date) }
         case "message":
             guard let message = object["message"] as? [String: Any] else { return }
             let role = message["role"] as? String
@@ -99,10 +106,7 @@ final class PiSource {
                 }
             case "assistant":
                 if let model = message["model"] as? String { state.model = model }
-                if let usage = message["usage"] as? [String: Any] {
-                    state.addUsage(TokenUsage(input: usage["input"] as? Int ?? 0, output: usage["output"] as? Int ?? 0,
-                                              cacheRead: usage["cacheRead"] as? Int ?? 0, cacheWrite: usage["cacheWrite"] as? Int ?? 0), at: date)
-                }
+                if let usage = message["usage"] as? [String: Any] { state.addUsage(Self.tokens(usage), at: date) }
                 if let blocks = message["content"] as? [[String: Any]] {
                     for block in blocks where block["type"] as? String == "toolCall" {
                         let id = block["id"] as? String ?? UUID().uuidString

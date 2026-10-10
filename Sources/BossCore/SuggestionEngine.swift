@@ -81,7 +81,8 @@ public struct Suggestion: Identifiable, Codable, Hashable, Sendable {
 }
 
 public struct SuggestionEngine: Sendable {
-    public static let learnedSection = "## Règles apprises"
+    public static let learnedSections = ["## Learned rules", "## Règles apprises"]
+    public static var learnedSection: String { tr("## Learned rules") }
 
     public init() {}
 
@@ -121,8 +122,8 @@ public struct SuggestionEngine: Sendable {
                 kind: .learnedRule,
                 title: cluster.rule,
                 rationale: count > 1
-                    ? "Tu as corrigé l'agent \(count) fois sur ce point dans \(projectName). Une règle écrite évite de le répéter."
-                    : "Tu as corrigé l'agent sur ce point dans \(projectName). Une règle écrite évite que ça se reproduise.",
+                    ? tr("You corrected the agent %d times on this in %@. A written rule saves you from repeating it.", count, projectName)
+                    : tr("You corrected the agent on this in %@. A written rule keeps it from happening again.", projectName),
                 project: projectName, filePath: target, operation: .appendRule(cluster.rule),
                 evidence: evidence, status: .new,
                 createdAt: cluster.items.compactMap(\.prompt.timestamp).max() ?? Date())
@@ -145,8 +146,8 @@ public struct SuggestionEngine: Sendable {
             if harnesses.contains(.claude) && hasAgents && !hasClaude {
                 result.append(Suggestion(
                     id: Self.stableId("fix", claudeMd, "import-agents"), kind: .setupFix,
-                    title: "Faire lire AGENTS.md à Claude Code",
-                    rationale: "\(name) a un AGENTS.md mais pas de CLAUDE.md : Claude Code ne lit pas tes règles dans ce projet.",
+                    title: tr("Make Claude Code read AGENTS.md"),
+                    rationale: tr("%@ has an AGENTS.md but no CLAUDE.md: Claude Code does not read your rules in this project.", name),
                     project: name, filePath: claudeMd, operation: .createFile("@AGENTS.md\n"), evidence: [],
                     status: .new, createdAt: Date()))
             }
@@ -154,9 +155,18 @@ public struct SuggestionEngine: Sendable {
                let body = try? String(contentsOfFile: claudeMd, encoding: .utf8) {
                 result.append(Suggestion(
                     id: Self.stableId("fix", agentsMd, "mirror-claude"), kind: .setupFix,
-                    title: "Donner les règles de CLAUDE.md aux autres agents",
-                    rationale: "Codex et Pi lisent AGENTS.md, absent de \(name) : ils travaillent sans les règles de CLAUDE.md.",
+                    title: tr("Share the CLAUDE.md rules with other agents"),
+                    rationale: tr("Codex and Pi read AGENTS.md, which %@ lacks: they work without the CLAUDE.md rules.", name),
                     project: name, filePath: agentsMd, operation: .createFile(body), evidence: [],
+                    status: .new, createdAt: Date()))
+            }
+            let geminiMd = (project as NSString).appendingPathComponent("GEMINI.md")
+            if harnesses.contains(.gemini) && hasAgents && !fm.fileExists(atPath: geminiMd) {
+                result.append(Suggestion(
+                    id: Self.stableId("fix", geminiMd, "import-agents"), kind: .setupFix,
+                    title: tr("Make Gemini read AGENTS.md"),
+                    rationale: tr("%@ has an AGENTS.md but no GEMINI.md: Gemini CLI does not read your rules in this project.", name),
+                    project: name, filePath: geminiMd, operation: .createFile("@AGENTS.md\n"), evidence: [],
                     status: .new, createdAt: Date()))
             }
             if hasClaude {
@@ -187,8 +197,9 @@ public struct SuggestionEngine: Sendable {
         guard !broken.isEmpty else { return [] }
         return [Suggestion(
             id: Self.stableId("fix", file, broken.joined()), kind: .setupFix,
-            title: "Retirer \(broken.count == 1 ? "un import cassé" : "\(broken.count) imports cassés")",
-            rationale: "\(broken.map { $0.trimmingCharacters(in: .whitespaces) }.joined(separator: ", ")) pointe vers un fichier qui n'existe plus : l'agent perd cette partie de ses règles sans le dire.",
+            title: broken.count == 1 ? tr("Remove a broken import") : tr("Remove %d broken imports", broken.count),
+            rationale: tr("%@ points to a file that no longer exists: the agent silently loses that part of its rules.",
+                          broken.map { $0.trimmingCharacters(in: .whitespaces) }.joined(separator: ", ")),
             project: project, filePath: file, operation: .removeLines(broken), evidence: [], status: .new, createdAt: Date())]
     }
 
@@ -201,8 +212,8 @@ public struct SuggestionEngine: Sendable {
                 .map { $0.trimmingCharacters(in: CharacterSet(charactersIn: "# ")) } ?? entry.lastPathComponent
             return Suggestion(
                 id: Self.stableId("fix", skill.path, "frontmatter"), kind: .setupFix,
-                title: "Décrire le skill \(entry.lastPathComponent)",
-                rationale: "Sans en-tête name/description, l'agent ne sait pas quand utiliser ce skill.",
+                title: tr("Describe the %@ skill", entry.lastPathComponent),
+                rationale: tr("Without a name/description header, the agent does not know when to use this skill."),
                 project: RulesInventory.globalScope, filePath: skill.path,
                 operation: .addFrontmatter(name: entry.lastPathComponent, description: heading),
                 evidence: [], status: .new, createdAt: Date())
@@ -230,7 +241,7 @@ public struct SuggestionEngine: Sendable {
         let bullet = "- \(rule)"
         var lines = content.isEmpty ? [] : content.components(separatedBy: "\n")
         while lines.last?.isEmpty == true { lines.removeLast() }
-        if let header = lines.firstIndex(of: learnedSection) {
+        if let header = lines.firstIndex(where: { learnedSections.contains($0) }) {
             var insert = header + 1
             while insert < lines.count && !lines[insert].hasPrefix("#") { insert += 1 }
             while insert > header + 1 && lines[insert - 1].isEmpty { insert -= 1 }

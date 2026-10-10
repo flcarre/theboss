@@ -6,6 +6,8 @@ public final class AgentMonitor: @unchecked Sendable {
     private let pi = PiSource(harness: .pi, root: Paths.pi)
     private let omp = PiSource(harness: .omp, root: Paths.omp)
     private let cursor = CursorSource()
+    private let gemini = GeminiSource()
+    private let copilot = CopilotSource()
     private let lock = NSLock()
 
     public init(keepMessages: Bool = true) {
@@ -13,6 +15,7 @@ public final class AgentMonitor: @unchecked Sendable {
         codex.keepMessages = keepMessages
         pi.keepMessages = keepMessages
         omp.keepMessages = keepMessages
+        copilot.keepMessages = keepMessages
     }
 
     public func sessions() -> [AgentSession] {
@@ -24,6 +27,8 @@ public final class AgentMonitor: @unchecked Sendable {
         all += pi.sessions()
         all += omp.sessions()
         all += cursor.sessions()
+        all += gemini.sessions()
+        all += copilot.sessions()
         all.removeAll { $0.cwd.hasPrefix(ownDirectory) }
         return all.sorted {
             if $0.status.priority != $1.status.priority { return $0.status.priority < $1.status.priority }
@@ -45,6 +50,12 @@ public final class AgentMonitor: @unchecked Sendable {
         case .omp:
             if let path = session.transcriptPath { return omp.parse(path: path).messages }
             return []
+        case .gemini:
+            if let path = session.transcriptPath { return gemini.messages(path: path) }
+            return []
+        case .copilot:
+            if let path = session.transcriptPath { return copilot.messages(path: path) }
+            return []
         case .cursor: return []
         }
     }
@@ -57,6 +68,8 @@ public final class AgentMonitor: @unchecked Sendable {
         prompts += codex.allPrompts(within: window)
         prompts += pi.allPrompts(within: window)
         prompts += omp.allPrompts(within: window)
+        prompts += gemini.allPrompts(within: window)
+        prompts += copilot.allPrompts(within: window)
         prompts.removeAll { $0.cwd.hasPrefix(ownDirectory) }
         return prompts
     }
@@ -70,6 +83,8 @@ public final class AgentMonitor: @unchecked Sendable {
             (.codex, codex.tokensByDay(within: window)),
             (.pi, pi.tokensByDay(within: window)),
             (.omp, omp.tokensByDay(within: window)),
+            (.gemini, gemini.tokensByDay(within: window)),
+            (.copilot, copilot.tokensByDay(within: window)),
         ]
         for (harness, days) in sources {
             for (day, usage) in days where usage.total > 0 {
@@ -93,6 +108,8 @@ public final class AgentMonitor: @unchecked Sendable {
         if fm.fileExists(atPath: Paths.cursor.path) { result.append(.cursor) }
         if fm.fileExists(atPath: Paths.pi.path) { result.append(.pi) }
         if fm.fileExists(atPath: Paths.omp.path) { result.append(.omp) }
+        if fm.fileExists(atPath: Paths.gemini.path) { result.append(.gemini) }
+        if fm.fileExists(atPath: Paths.copilot.path) { result.append(.copilot) }
         return result
     }
 }

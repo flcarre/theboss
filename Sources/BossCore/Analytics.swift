@@ -15,10 +15,10 @@ public enum Trend: Sendable {
 
     public var label: String {
         switch self {
-        case .improving: "Ton setup s'améliore"
-        case .degrading: "Ton setup se dégrade"
-        case .stable: "Ton setup est stable"
-        case .notEnoughData: "Pas encore assez de données"
+        case .improving: tr("Your setup is improving")
+        case .degrading: tr("Your setup is getting worse")
+        case .stable: tr("Your setup is stable")
+        case .notEnoughData: tr("Not enough data yet")
         }
     }
 }

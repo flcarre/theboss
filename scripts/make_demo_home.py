@@ -63,3 +63,28 @@ write_jsonl(rollout, [
 (home / ".claude/CLAUDE.md").write_text("# Mes règles\n\n- Réponds en français.\n")
 (home / ".claude/settings.json").write_text(json.dumps({"hooks": {"PostToolUse": [{"matcher": "Edit", "hooks": [{"type": "command", "command": "npm run lint --silent"}]}]}}))
 print(home)
+
+gemini_project = home / ".gemini/tmp/mobile-app"
+(gemini_project / "chats").mkdir(parents=True, exist_ok=True)
+(gemini_project / ".project_root").write_text(str(home / "code" / "mobile-app") + "\n")
+write_jsonl(gemini_project / "chats" / "session-demo.jsonl", [
+    {"sessionId": "gemini-demo-1", "projectHash": "demo", "startTime": stamp(40), "lastUpdated": stamp(0), "kind": "main"},
+    {"id": "gu1", "timestamp": stamp(40), "type": "user", "content": [{"text": "Write the onboarding screens in SwiftUI"}]},
+    {"id": "gg1", "timestamp": stamp(39), "type": "gemini", "content": "Working on the three onboarding screens.", "model": "gemini-3-pro",
+     "tokens": {"input": 8000, "output": 1200, "cached": 2000, "total": 9200}},
+    {"$set": {"lastUpdated": stamp(0), "summary": "Onboarding screens"}},
+    {"id": "gu2", "timestamp": stamp(0), "type": "user", "content": [{"text": "Add a skip button too"}]},
+])
+
+copilot_session = home / ".copilot/session-state/copilot-demo-1"
+copilot_session.mkdir(parents=True, exist_ok=True)
+(copilot_session / "workspace.yaml").write_text(f"id: copilot-demo-1\ncwd: {home / 'code' / 'web-dashboard'}\nsummary: Upgrade to React 20\n")
+(copilot_session / "inuse.1.lock").write_text("1")
+write_jsonl(copilot_session / "events.jsonl", [
+    {"id": "c1", "timestamp": stamp(15), "type": "session.start", "data": {"sessionId": "copilot-demo-1", "selectedModel": "gpt-5",
+     "context": {"cwd": str(home / "code" / "web-dashboard")}}},
+    {"id": "c2", "timestamp": stamp(14), "type": "user.message", "data": {"content": "Upgrade the dashboard to React 20"}},
+    {"id": "c3", "timestamp": stamp(13), "type": "assistant.turn_start", "data": {"turnId": "1"}},
+    {"id": "c4", "timestamp": stamp(2), "type": "permission.requested", "data": {"requestId": "p1",
+     "permissionRequest": {"kind": "shell", "fullCommandText": "npm install react@20", "intention": "Install React 20"}}},
+])

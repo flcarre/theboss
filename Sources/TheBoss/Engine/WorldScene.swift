@@ -5,6 +5,7 @@ import SpriteKit
 protocol WorldSceneDelegate: AnyObject {
     var isInputBlocked: Bool { get }
     func world(didInteract interaction: Interaction, session: AgentSession?)
+    func world(didWhip session: AgentSession?)
     func worldDidRequestMenu()
     func world(didEnter room: RoomID)
 }
@@ -53,9 +54,9 @@ final class WorldScene: SKScene {
         world.addChild(floor)
         for c in 0..<room.cols {
             for r in 0..<room.walkRows {
-                let hash = (c * 73 + r * 151 + c * r * 7) % 97
-                let path = room.floorTiles[hash % room.floorTiles.count]
-                let tile = SKSpriteNode(texture: Assets.texture(path))
+                let variant = (c * 73 + r * 151 + c * r * 7) % 97 % 4
+                let texture = room.floor == .parquet ? ProceduralArt.parquet(variant: variant) : ProceduralArt.carpet(variant: variant)
+                let tile = SKSpriteNode(texture: texture)
                 tile.anchorPoint = .zero
                 tile.position = CGPoint(x: CGFloat(c) * tileSize, y: CGFloat(r) * tileSize)
                 floor.addChild(tile)
@@ -109,8 +110,8 @@ final class WorldScene: SKScene {
             }
             world.addChild(node)
             if prop.interaction == .inbox {
-                inboxBadge = SKSpriteNode(texture: Assets.texture("tbfc/emotes/emotes_bulles_exclamation.png"))
-                inboxBadge.setScale(0.45)
+                inboxBadge = SKSpriteNode(texture: ProceduralArt.exclamation)
+                inboxBadge.setScale(2)
                 inboxBadge.anchorPoint = CGPoint(x: 0.5, y: 0)
                 inboxBadge.position = CGPoint(x: node.position.x + 18, y: node.position.y + node.size.height - 4)
                 inboxBadge.zPosition = node.zPosition + 1
@@ -280,6 +281,45 @@ final class WorldScene: SKScene {
         updateCamera(force: true)
     }
 
+    func crackWhip() {
+        guard !player.isMoving, !transitioning else { return }
+        heldKeys.removeAll()
+        let target = player.tile.moved(player.facing)
+        var robot: RobotNode?
+        if case .robot(let slot) = room.interaction(at: target) { robot = self.robot(atSlot: slot) }
+        player.crackWhip { [weak self] in
+            guard let self else { return }
+            let impact: CGPoint
+            if let robot {
+                impact = CGPoint(x: robot.position.x, y: robot.position.y + 70)
+                robot.whipped(boost: true)
+            } else {
+                let front = TheBoss.position(of: target)
+                impact = CGPoint(x: front.x, y: front.y + 50)
+            }
+            let crack = SKSpriteNode()
+            crack.position = impact
+            crack.zPosition = 20_000
+            crack.setScale(2)
+            self.world.addChild(crack)
+            crack.run(.sequence([.animate(with: (0..<5).map { ProceduralArt.crack(frame: $0) }, timePerFrame: 0.05, resize: true, restore: false), .removeFromParent()]))
+            let label = SKLabelNode(text: tr("CRACK!"))
+            label.fontName = Theme.roundedFontName(size: 18, weight: .black)
+            label.fontSize = 18
+            label.fontColor = NSColor(srgbRed: 0.96, green: 0.73, blue: 0.26, alpha: 1)
+            label.position = CGPoint(x: impact.x + 26, y: impact.y + 18)
+            label.zPosition = 20_001
+            self.world.addChild(label)
+            label.run(.sequence([.group([.moveBy(x: 0, y: 14, duration: 0.5), .sequence([.wait(forDuration: 0.3), .fadeOut(withDuration: 0.3)])]), .removeFromParent()]))
+            self.shakeCamera()
+            self.controller?.world(didWhip: robot?.session)
+        }
+    }
+
+    private func shakeCamera() {
+        world.run(.sequence([.moveBy(x: 4, y: 0, duration: 0.03), .moveBy(x: -8, y: 2, duration: 0.04), .moveBy(x: 4, y: -2, duration: 0.03), .move(to: .zero, duration: 0)]))
+    }
+
     func interact() {
         let target = player.tile.moved(player.facing)
         guard let interaction = room.interaction(at: target) else { return }
@@ -316,6 +356,9 @@ final class WorldScene: SKScene {
             return true
         case 53, 48, 7:
             controller?.worldDidRequestMenu()
+            return true
+        case 3:
+            crackWhip()
             return true
         default:
             return false

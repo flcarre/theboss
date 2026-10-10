@@ -1,4 +1,5 @@
 import AppKit
+import BossCore
 import SpriteKit
 
 @MainActor
@@ -50,6 +51,9 @@ enum DebugDriver {
                 case "apply":
                     let title = parts.dropFirst().joined(separator: ":")
                     if let target = model.openSuggestions.first(where: { $0.title.contains(title) }) { model.setStatus(.applied, for: target) }
+                case "lang":
+                    model.settings.language = AppLanguage(rawValue: parts[safe: 1] ?? "en") ?? .english
+                    model.saveSettings()
                 case "repair":
                     model.repairClaudeUsage()
                 case "refine":

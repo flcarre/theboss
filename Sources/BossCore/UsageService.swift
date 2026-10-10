@@ -12,11 +12,11 @@ public enum UsageState: Hashable, Sendable {
     public var problem: String? {
         switch self {
         case .ok: nil
-        case .notInstalled: "Pas installé sur ce Mac."
-        case .signedOut: "Claude Code n'est pas connecté."
-        case .keychainBlocked: "macOS bloque la lecture du trousseau."
-        case .tokenExpired: "Le jeton de connexion a expiré."
-        case .noData: "Pas encore de données d'usage."
+        case .notInstalled: tr("Not installed on this Mac.")
+        case .signedOut: tr("Claude Code is signed out.")
+        case .keychainBlocked: tr("macOS is blocking the keychain read.")
+        case .tokenExpired: tr("The sign-in token has expired.")
+        case .noData: tr("No usage data yet.")
         case .failed(let message): message
         }
     }
@@ -24,20 +24,20 @@ public enum UsageState: Hashable, Sendable {
     public var fixSteps: [String] {
         switch self {
         case .signedOut:
-            ["Ouvre un terminal et lance `claude auth status --text`.",
-             "S'il dit « not logged in », lance `claude auth login`.",
-             "Reviens ici : la jauge se remplit au prochain passage."]
+            [tr("Open a terminal and run `claude auth status --text`."),
+             tr("If it says “not logged in”, run `claude auth login`."),
+             tr("Come back here: the gauge fills on the next refresh.")]
         case .keychainBlocked:
-            ["Ouvre Trousseaux d'accès et cherche « Claude Code-credentials ».",
-             "Onglet Contrôle d'accès : ajoute The Boss à « Toujours autoriser l'accès par ces applications ».",
-             "S'il y a plusieurs éléments qui commencent par ce nom, fais-le pour chacun.",
-             "Ça ne change rien à ton compte Claude et ne te connecte pas."]
+            [tr("Open Keychain Access and search for “Claude Code-credentials”."),
+             tr("Access Control tab: add The Boss to “Always allow access by these applications”."),
+             tr("If several items start with that name, do it for each one."),
+             tr("This does not change your Claude account and does not sign you in.")]
         case .tokenExpired:
-            ["Clique « Réparer automatiquement » : Claude Code rafraîchit son jeton.",
-             "Si ça échoue, lance `claude auth login` dans un terminal.",
-             "Reviens ici : la jauge se met à jour toute seule."]
+            [tr("Click “Fix automatically”: Claude Code refreshes its token."),
+             tr("If that fails, run `claude auth login` in a terminal."),
+             tr("Come back here: the gauge updates on its own.")]
         case .noData:
-            ["Lance une session : les limites arrivent avec la première réponse de l'agent."]
+            [tr("Start a session: limits arrive with the agent's first reply.")]
         default: []
         }
     }
@@ -100,7 +100,7 @@ public final class UsageService: @unchecked Sendable {
     private var lastClaudeFetch: Date?
     private var lastGood: ProviderUsage?
     private var backoffUntil: Date?
-    static let throttledPrefix = "Anthropic limite"
+    static var throttledMessage: String { tr("Anthropic is throttling usage reads. Retrying in 5 min.") }
     private let session: URLSession
     private let readCredentials: () -> KeychainResult
 
@@ -155,7 +155,7 @@ public final class UsageService: @unchecked Sendable {
         }
         var result = await fetchClaude()
         lastClaudeFetch = Date()
-        if case .failed(let message) = result.state, message.hasPrefix(Self.throttledPrefix) {
+        if case .failed(let message) = result.state, message == Self.throttledMessage {
             backoffUntil = Date().addingTimeInterval(300)
             if let lastGood, lastGood.state == .ok {
                 result = lastGood
@@ -196,40 +196,40 @@ public final class UsageService: @unchecked Sendable {
                 return ProviderUsage(harness: .claude, state: .tokenExpired, plan: credentials.subscription)
             }
             if code == 429 {
-                return ProviderUsage(harness: .claude, state: .failed("\(Self.throttledPrefix) les lectures d'usage. Nouvel essai dans 5 min."), plan: credentials.subscription)
+                return ProviderUsage(harness: .claude, state: .failed(tr("Anthropic is throttling usage reads. Retrying in 5 min.")), plan: credentials.subscription)
             }
             guard code == 200 else {
-                return ProviderUsage(harness: .claude, state: .failed("Réponse HTTP \(code) de Anthropic."), plan: credentials.subscription)
+                return ProviderUsage(harness: .claude, state: .failed(tr("HTTP %d response from Anthropic.", code)), plan: credentials.subscription)
             }
             let windows = Self.parseClaudeWindows(data)
             return ProviderUsage(harness: .claude, state: .ok, plan: credentials.subscription, windows: windows, observedAt: Date())
         } catch {
-            return ProviderUsage(harness: .claude, state: .failed("Réseau indisponible : \(error.localizedDescription)"), plan: credentials.subscription)
+            return ProviderUsage(harness: .claude, state: .failed(tr("Network unavailable: %@", error.localizedDescription)), plan: credentials.subscription)
         }
     }
 
     func cursorUsage() async -> ProviderUsage? {
         guard CursorAuth.isInstalled else { return nil }
         guard let token = CursorAuth.usableToken(), let user = CursorAuth.userId(fromJWT: token) else {
-            return ProviderUsage(harness: .cursor, state: .failed("Cursor n'est pas connecté (ou sa session a expiré) : ouvre Cursor pour te reconnecter."))
+            return ProviderUsage(harness: .cursor, state: .failed(tr("Cursor is signed out (or its session expired): open Cursor to sign in again.")))
         }
         let cookie = "WorkosCursorSessionToken=\(user)%3A%3A\(token)"
         do {
             let (summaryData, summaryCode) = try await cursorGet("https://cursor.com/api/usage-summary", cookie: cookie)
             if summaryCode == 401 || summaryCode == 403 {
-                return ProviderUsage(harness: .cursor, state: .failed("Cursor refuse la session : reconnecte-toi dans Cursor."))
+                return ProviderUsage(harness: .cursor, state: .failed(tr("Cursor rejected the session: sign in again in Cursor.")))
             }
             if summaryCode == 200, let parsed = Self.parseCursorSummary(summaryData), !parsed.windows.isEmpty {
                 return ProviderUsage(harness: .cursor, state: .ok, plan: parsed.plan, windows: parsed.windows, observedAt: Date())
             }
             let (legacyData, legacyCode) = try await cursorGet("https://cursor.com/api/usage?user=\(user)", cookie: cookie)
             guard legacyCode == 200 else {
-                return ProviderUsage(harness: .cursor, state: .failed("Réponse HTTP \(legacyCode) de Cursor."))
+                return ProviderUsage(harness: .cursor, state: .failed(tr("HTTP %d response from Cursor.", legacyCode)))
             }
             let windows = Self.parseCursorWindows(legacyData)
             return ProviderUsage(harness: .cursor, state: windows.isEmpty ? .noData : .ok, windows: windows, observedAt: Date())
         } catch {
-            return ProviderUsage(harness: .cursor, state: .failed("Réseau indisponible : \(error.localizedDescription)"))
+            return ProviderUsage(harness: .cursor, state: .failed(tr("Network unavailable: %@", error.localizedDescription)))
         }
     }
 
@@ -261,10 +261,10 @@ public final class UsageService: @unchecked Sendable {
             ?? ratio(individual?["overall"] as? [String: Any])
             ?? ratio((json["teamUsage"] as? [String: Any])?["pooled"] as? [String: Any])
         if let planPercent {
-            windows.append(RateWindow(label: "Forfait du mois", usedPercent: min(100, max(0, planPercent)), resetsAt: reset, windowMinutes: nil))
+            windows.append(RateWindow(label: tr("Monthly plan"), usedPercent: min(100, max(0, planPercent)), resetsAt: reset, windowMinutes: nil))
         }
         if let onDemand = ratio(individual?["onDemand"] as? [String: Any]) {
-            windows.append(RateWindow(label: "À la demande", usedPercent: min(100, max(0, onDemand)), resetsAt: reset, windowMinutes: nil))
+            windows.append(RateWindow(label: tr("On-demand"), usedPercent: min(100, max(0, onDemand)), resetsAt: reset, windowMinutes: nil))
         }
         return (json["membershipType"] as? String, windows)
     }
@@ -277,15 +277,15 @@ public final class UsageService: @unchecked Sendable {
             guard let model = json[key] as? [String: Any],
                   let used = (model["numRequests"] as? NSNumber)?.doubleValue,
                   let max = (model["maxRequestUsage"] as? NSNumber)?.doubleValue, max > 0 else { return nil }
-            return RateWindow(label: "Requêtes \(key)", usedPercent: min(100, used / max * 100), resetsAt: reset, windowMinutes: nil)
+            return RateWindow(label: tr("%@ requests", key), usedPercent: min(100, used / max * 100), resetsAt: reset, windowMinutes: nil)
         }
     }
 
     static func parseClaudeWindows(_ data: Data) -> [RateWindow] {
         guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return [] }
         let order = ["five_hour", "seven_day", "seven_day_opus", "seven_day_sonnet", "seven_day_oauth_apps"]
-        let labels = ["five_hour": "5 h", "seven_day": "Semaine", "seven_day_opus": "Semaine · Opus",
-                      "seven_day_sonnet": "Semaine · Sonnet", "seven_day_oauth_apps": "Semaine · Apps"]
+        let labels = ["five_hour": tr("5 h"), "seven_day": tr("Week"), "seven_day_opus": tr("Week · Opus"),
+                      "seven_day_sonnet": tr("Week · Sonnet"), "seven_day_oauth_apps": tr("Week · Apps")]
         let keys = json.keys.sorted { (order.firstIndex(of: $0) ?? 99, $0) < (order.firstIndex(of: $1) ?? 99, $1) }
         return keys.compactMap { key in
             guard let window = json[key] as? [String: Any],

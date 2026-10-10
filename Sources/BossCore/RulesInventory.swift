@@ -5,12 +5,12 @@ public enum RuleKind: String, CaseIterable, Sendable, Codable {
 
     public var label: String {
         switch self {
-        case .instructions: "Règles"
-        case .skill: "Skills"
-        case .hook: "Hooks"
-        case .agent: "Sous-agents"
-        case .command: "Commandes"
-        case .settings: "Réglages"
+        case .instructions: tr("Rules")
+        case .skill: tr("Skills")
+        case .hook: tr("Hooks")
+        case .agent: tr("Subagents")
+        case .command: tr("Commands")
+        case .settings: tr("Settings")
         }
     }
 }
@@ -84,6 +84,22 @@ public struct RulesInventory: Sendable {
         items += markdownFiles(in: Paths.cursor.appendingPathComponent("rules"), kind: .instructions, harness: .cursor, scope: scope)
         items += file(Paths.pi.appendingPathComponent("agent/AGENTS.md"), kind: .instructions, harness: .pi, scope: scope)
         items += file(Paths.omp.appendingPathComponent("agent/AGENTS.md"), kind: .instructions, harness: .omp, scope: scope)
+        let gemini = Paths.gemini
+        items += file(gemini.appendingPathComponent("GEMINI.md"), kind: .instructions, harness: .gemini, scope: scope)
+        items += file(gemini.appendingPathComponent("settings.json"), kind: .settings, harness: .gemini, scope: scope)
+        items += hooks(in: gemini.appendingPathComponent("settings.json"), harness: .gemini, scope: scope)
+        items += markdownFiles(in: gemini.appendingPathComponent("commands"), kind: .command, harness: .gemini, scope: scope, extensions: ["toml"])
+        items += markdownFiles(in: gemini.appendingPathComponent("agents"), kind: .agent, harness: .gemini, scope: scope)
+        items += skills(in: gemini.appendingPathComponent("skills"), harness: .gemini, scope: scope)
+        let copilot = Paths.copilot
+        items += file(copilot.appendingPathComponent("copilot-instructions.md"), kind: .instructions, harness: .copilot, scope: scope)
+        items += markdownFiles(in: copilot.appendingPathComponent("instructions"), kind: .instructions, harness: .copilot, scope: scope)
+        items += file(copilot.appendingPathComponent("settings.json"), kind: .settings, harness: .copilot, scope: scope)
+        items += hooks(in: copilot.appendingPathComponent("settings.json"), harness: .copilot, scope: scope)
+        items += file(copilot.appendingPathComponent("mcp-config.json"), kind: .settings, harness: .copilot, scope: scope)
+        items += markdownFiles(in: copilot.appendingPathComponent("agents"), kind: .agent, harness: .copilot, scope: scope)
+        items += markdownFiles(in: copilot.appendingPathComponent("hooks"), kind: .hook, harness: .copilot, scope: scope, extensions: ["json"])
+        items += skills(in: copilot.appendingPathComponent("skills"), harness: .copilot, scope: scope)
         return items
     }
 
@@ -95,9 +111,16 @@ public struct RulesInventory: Sendable {
         items += file(base.appendingPathComponent("CLAUDE.local.md"), kind: .instructions, harness: .claude, scope: scope)
         items += file(base.appendingPathComponent(".claude/CLAUDE.md"), kind: .instructions, harness: .claude, scope: scope)
         items += file(base.appendingPathComponent("AGENTS.md"), kind: .instructions, harness: .codex, scope: scope)
-        items += file(base.appendingPathComponent("GEMINI.md"), kind: .instructions, harness: .pi, scope: scope)
+        items += file(base.appendingPathComponent("GEMINI.md"), kind: .instructions, harness: .gemini, scope: scope)
+        items += file(base.appendingPathComponent(".gemini/settings.json"), kind: .settings, harness: .gemini, scope: scope)
+        items += hooks(in: base.appendingPathComponent(".gemini/settings.json"), harness: .gemini, scope: scope)
+        items += markdownFiles(in: base.appendingPathComponent(".gemini/commands"), kind: .command, harness: .gemini, scope: scope, extensions: ["toml"])
+        items += markdownFiles(in: base.appendingPathComponent(".github/instructions"), kind: .instructions, harness: .copilot, scope: scope)
+        items += markdownFiles(in: base.appendingPathComponent(".github/agents"), kind: .agent, harness: .copilot, scope: scope)
+        items += markdownFiles(in: base.appendingPathComponent(".github/hooks"), kind: .hook, harness: .copilot, scope: scope, extensions: ["json"])
+        items += file(base.appendingPathComponent(".github/copilot/settings.json"), kind: .settings, harness: .copilot, scope: scope)
         items += file(base.appendingPathComponent(".cursorrules"), kind: .instructions, harness: .cursor, scope: scope)
-        items += file(base.appendingPathComponent(".github/copilot-instructions.md"), kind: .instructions, harness: .codex, scope: scope)
+        items += file(base.appendingPathComponent(".github/copilot-instructions.md"), kind: .instructions, harness: .copilot, scope: scope)
         for name in ["settings.json", "settings.local.json"] {
             let url = base.appendingPathComponent(".claude/\(name)")
             items += file(url, kind: .settings, harness: .claude, scope: scope)
@@ -123,10 +146,10 @@ public struct RulesInventory: Sendable {
                          modifiedAt: attributes?[.modificationDate] as? Date)]
     }
 
-    func markdownFiles(in dir: URL, kind: RuleKind, harness: Harness, scope: String) -> [RuleItem] {
+    func markdownFiles(in dir: URL, kind: RuleKind, harness: Harness, scope: String, extensions: Set<String> = ["md", "mdc"]) -> [RuleItem] {
         guard let enumerator = FileManager.default.enumerator(at: dir, includingPropertiesForKeys: nil) else { return [] }
         var items: [RuleItem] = []
-        for case let url as URL in enumerator where ["md", "mdc"].contains(url.pathExtension) {
+        for case let url as URL in enumerator where extensions.contains(url.pathExtension) {
             items += file(url, kind: kind, harness: harness, scope: scope, name: url.deletingPathExtension().lastPathComponent)
         }
         return items

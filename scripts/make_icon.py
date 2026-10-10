@@ -27,9 +27,9 @@ def art():
             else:
                 canvas.putpixel((x, y), raised if (x // 8 + y // 8) % 2 else base)
     robot = Image.open(ASSETS / "characters/robot_claude/rotations/south.png").convert("RGBA").crop((14, 10, 102, 114))
-    boss = Image.open(ASSETS / "characters/boss/rotations/south.png").convert("RGBA").crop((38, 14, 86, 114))
+    boss = Image.open(ASSETS / "characters/boss/rotations/south.png").convert("RGBA").crop((30, 14, 100, 116))
     canvas.alpha_composite(robot, (40, 16))
-    canvas.alpha_composite(boss, (14, 24))
+    canvas.alpha_composite(boss, (6, 22))
     return canvas
 
 

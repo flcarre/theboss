@@ -9,6 +9,8 @@ public enum Paths {
     public static var cursor: URL { home.appendingPathComponent(".cursor") }
     public static var pi: URL { home.appendingPathComponent(".pi") }
     public static var omp: URL { home.appendingPathComponent(".omp") }
+    public static var gemini: URL { home.appendingPathComponent(".gemini") }
+    public static var copilot: URL { home.appendingPathComponent(".copilot") }
 
     public static var appSupport: URL {
         let base = ProcessInfo.processInfo.environment["BOSS_HOME"] != nil

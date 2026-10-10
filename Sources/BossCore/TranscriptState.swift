@@ -72,7 +72,7 @@ struct TranscriptState {
     var displayTitle: String {
         if let title, !title.isEmpty { return title }
         if let firstPrompt { return firstPrompt.singleLine.truncated(60) }
-        return "Session sans titre"
+        return tr("Untitled session")
     }
 
     var pendingDescription: String? {

@@ -3,8 +3,7 @@ import subprocess
 from PIL import Image
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-ASSETS = ROOT / "Sources" / "TheBoss" / "Assets"
-OUT = ROOT / "build"
+ASSETS = ROOT / "app" / "public" / "assets"
 
 
 def art():
@@ -34,17 +33,10 @@ def art():
 
 
 def main():
-    OUT.mkdir(exist_ok=True)
     image = art()
     big = image.resize((1024, 1024), Image.NEAREST)
     big.save(ASSETS / "AppIcon.png")
-    iconset = OUT / "AppIcon.iconset"
-    iconset.mkdir(exist_ok=True)
-    for points in (16, 32, 128, 256, 512):
-        for scale in (1, 2):
-            pixels = points * scale
-            big.resize((pixels, pixels), Image.NEAREST).save(iconset / f"icon_{points}x{points}{'@2x' if scale == 2 else ''}.png")
-    subprocess.run(["iconutil", "-c", "icns", str(iconset), "-o", str(OUT / "AppIcon.icns")], check=True)
+    subprocess.run(["npx", "tauri", "icon", "public/assets/AppIcon.png", "-o", "src-tauri/icons"], cwd=ROOT / "app", check=True)
 
 
 main()

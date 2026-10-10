@@ -7,7 +7,7 @@ from PIL import Image, ImageOps
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 MANIFEST = ROOT / "design" / "pixellab.json"
-OUT = ROOT / "Sources" / "TheBoss" / "Assets"
+OUT = ROOT / "app" / "public" / "assets"
 
 
 def fetch(url, dest):

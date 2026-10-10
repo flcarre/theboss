@@ -5,7 +5,7 @@ import shutil
 from PIL import Image
 
 SITE = pathlib.Path(__file__).resolve().parent.parent
-GAME = SITE.parent / "Sources" / "TheBoss" / "Assets"
+GAME = SITE.parent / "app" / "public" / "assets"
 OUT = SITE / "public" / "assets"
 GAME_ROBOTS = ["claude", "codex", "cursor", "gemini", "copilot"]
 SITE_ONLY_ROBOTS: list[str] = []

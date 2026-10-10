@@ -1,0 +1,23 @@
+[package]
+name = "theboss"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Your coding agents as a pixel office"
+
+[lib]
+name = "theboss_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.7", features = [] }
+
+[dependencies]
+boss-core = { path = "../../core" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tauri = { version = "2.12", features = ["tray-icon", "image-png"] }
+tauri-plugin-clipboard-manager = "2.4"
+tauri-plugin-notification = "2.5"
+tauri-plugin-opener = "2.7"
+tauri-plugin-single-instance = "2.5"

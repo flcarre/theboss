@@ -4,7 +4,7 @@ const POINTS = [
   { title: "Needs you, first", body: "Every waiting agent with the exact command it wants to run. Click a row to land in that session." },
   { title: "Working and recently done", body: "Who's busy, who just finished, and how long ago each one last moved." },
   { title: "Limits before the wall", body: "Claude and Codex, five-hour and weekly windows, going green, orange, then red." },
-  { title: "Mail on the badge", body: "Open suggestions are one click away. Notifications and a Dock badge cover the rest." },
+  { title: "Mail on the badge", body: "Open suggestions are one click away. Notifications and an app badge cover the rest." },
 ];
 
 export default function MenuBar() {
@@ -20,7 +20,7 @@ export default function MenuBar() {
               <em>Keep an ear open.</em>
             </h2>
             <p className="lede">
-              The Boss lives in your menu bar too. A tiny pixel robot counts who&rsquo;s working, and raises a
+              The Boss lives in your menu bar or system tray too. A tiny pixel robot counts who&rsquo;s working, and raises a
               <b className="menubar-bang"> ! </b>with a number the moment one of them is waiting on you.
             </p>
           </header>

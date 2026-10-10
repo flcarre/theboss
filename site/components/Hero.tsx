@@ -6,7 +6,7 @@ export default function Hero() {
       <div className="hero-copy">
         <p className="kicker reveal">
           <span className="kicker-dot" />
-          A macOS app for people who manage coding agents
+          A desktop app for people who manage coding agents
         </p>
         <h1 className="hero-title reveal">
           <span className="line">You&rsquo;re the</span>
@@ -22,15 +22,15 @@ export default function Hero() {
             the whip.
           </p>
           <div className="hero-ctas">
-            <a className="btn btn-gold" href="#install">Get The Boss</a>
+            <a className="btn btn-gold" href="#download">Get The Boss</a>
             <a className="link-arrow" href="#tour">
               Take the tour <span aria-hidden="true">→</span>
             </a>
           </div>
           <ul className="hero-facts">
-            <li>macOS 14+</li>
+            <li>macOS · Windows · Linux</li>
             <li>Runs 100% local</li>
-            <li>Native Swift</li>
+            <li>Free download</li>
           </ul>
         </div>
       </div>

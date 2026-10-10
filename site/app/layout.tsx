@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://theboss-iota.vercel.app"),
   title: "The Boss — your coding agents, clocked in",
   description:
-    "A macOS app that turns every Claude Code, Codex, Gemini, Copilot and Cursor session into a pixel robot at a desk. Walk the floor, see who needs you, and teach your setup from your own corrections.",
+    "A desktop app for macOS, Windows and Linux that turns every Claude Code, Codex, Gemini, Copilot and Cursor session into a pixel robot at a desk. Walk the floor, see who needs you, and teach your setup from your own corrections.",
   icons: { icon: "/assets/AppIcon.png", apple: "/assets/AppIcon.png" },
   openGraph: {
     title: "The Boss — your coding agents, clocked in",

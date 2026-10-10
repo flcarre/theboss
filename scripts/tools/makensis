@@ -1,0 +1,9 @@
+#!/bin/sh
+set -e
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+CACHE="$HOME/Library/Caches/tauri"
+mkdir -p "$CACHE"
+if ! docker image inspect theboss-nsis > /dev/null 2>&1; then
+  printf 'FROM debian:trixie-slim\nRUN apt-get update -qq && apt-get install -y -qq nsis && rm -rf /var/lib/apt/lists/*\n' | docker build -q -t theboss-nsis - > /dev/null
+fi
+exec docker run --rm -v "$ROOT:$ROOT" -v "$CACHE:$CACHE" -w "$PWD" theboss-nsis makensis "$@"

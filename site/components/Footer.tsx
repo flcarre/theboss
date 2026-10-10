@@ -9,7 +9,7 @@ export default function Footer() {
             <br />
             <em>They&rsquo;ve got this.</em>
           </p>
-          <a className="btn btn-gold" href="#install">Get The Boss</a>
+          <a className="btn btn-gold" href="#download">Get The Boss</a>
         </div>
       </div>
       <div className="foot-meta">

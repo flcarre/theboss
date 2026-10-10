@@ -40,7 +40,7 @@ export default function Header() {
         <span suppressHydrationWarning>{time}</span>
         <span className="bar-clock-label">· 8 robots on shift</span>
       </div>
-      <a className="btn btn-gold btn-sm" href="#install">Get the app</a>
+      <a className="btn btn-gold btn-sm" href="#download">Get the app</a>
     </header>
   );
 }

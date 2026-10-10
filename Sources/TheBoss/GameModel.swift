@@ -295,7 +295,7 @@ final class GameModel: ObservableObject, WorldSceneDelegate {
                 let freshIds = Set(fresh.map(\.id))
                 merged += saved.filter { !freshIds.contains($0.id) && $0.status != .new }
                 let before = Set(self.openSuggestions.map(\.id))
-                self.suggestions = merged.sorted { $0.createdAt > $1.createdAt }
+                self.suggestions = merged.sorted { $0.createdAt != $1.createdAt ? $0.createdAt > $1.createdAt : $0.id < $1.id }
                 self.rules = rules
                 self.analytics = analytics
                 let added = self.openSuggestions.filter { !before.contains($0.id) }

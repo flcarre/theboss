@@ -149,7 +149,7 @@ public struct SuggestionEngine: Sendable {
                     title: tr("Make Claude Code read AGENTS.md"),
                     rationale: tr("%@ has an AGENTS.md but no CLAUDE.md: Claude Code does not read your rules in this project.", name),
                     project: name, filePath: claudeMd, operation: .createFile("@AGENTS.md\n"), evidence: [],
-                    status: .new, createdAt: Date()))
+                    status: .new, createdAt: Self.stamp(agentsMd)))
             }
             if (harnesses.contains(.codex) || harnesses.contains(.pi) || harnesses.contains(.omp)) && hasClaude && !hasAgents,
                let body = try? String(contentsOfFile: claudeMd, encoding: .utf8) {
@@ -158,7 +158,7 @@ public struct SuggestionEngine: Sendable {
                     title: tr("Share the CLAUDE.md rules with other agents"),
                     rationale: tr("Codex and Pi read AGENTS.md, which %@ lacks: they work without the CLAUDE.md rules.", name),
                     project: name, filePath: agentsMd, operation: .createFile(body), evidence: [],
-                    status: .new, createdAt: Date()))
+                    status: .new, createdAt: Self.stamp(claudeMd)))
             }
             let geminiMd = (project as NSString).appendingPathComponent("GEMINI.md")
             if harnesses.contains(.gemini) && hasAgents && !fm.fileExists(atPath: geminiMd) {
@@ -167,7 +167,7 @@ public struct SuggestionEngine: Sendable {
                     title: tr("Make Gemini read AGENTS.md"),
                     rationale: tr("%@ has an AGENTS.md but no GEMINI.md: Gemini CLI does not read your rules in this project.", name),
                     project: name, filePath: geminiMd, operation: .createFile("@AGENTS.md\n"), evidence: [],
-                    status: .new, createdAt: Date()))
+                    status: .new, createdAt: Self.stamp(agentsMd)))
             }
             if hasClaude {
                 result += brokenImports(file: claudeMd, project: name)
@@ -200,7 +200,7 @@ public struct SuggestionEngine: Sendable {
             title: broken.count == 1 ? tr("Remove a broken import") : tr("Remove %d broken imports", broken.count),
             rationale: tr("%@ points to a file that no longer exists: the agent silently loses that part of its rules.",
                           broken.map { $0.trimmingCharacters(in: .whitespaces) }.joined(separator: ", ")),
-            project: project, filePath: file, operation: .removeLines(broken), evidence: [], status: .new, createdAt: Date())]
+            project: project, filePath: file, operation: .removeLines(broken), evidence: [], status: .new, createdAt: Self.stamp(file))]
     }
 
     func skillsWithoutDescription(in root: URL) -> [Suggestion] {
@@ -216,8 +216,12 @@ public struct SuggestionEngine: Sendable {
                 rationale: tr("Without a name/description header, the agent does not know when to use this skill."),
                 project: RulesInventory.globalScope, filePath: skill.path,
                 operation: .addFrontmatter(name: entry.lastPathComponent, description: heading),
-                evidence: [], status: .new, createdAt: Date())
+                evidence: [], status: .new, createdAt: Self.stamp(skill.path))
         }
+    }
+
+    static func stamp(_ path: String) -> Date {
+        fileModificationDate(path) ?? .distantPast
     }
 
     static func targetFile(project: String, harness: Harness) -> String {

@@ -1,5 +1,8 @@
 enum FrenchStrings {
     static let table: [String: String] = [
+        "Cursor chat %@": "Chat Cursor %@",
+        "New session": "Nouvelle session",
+        "tool": "outil",
         "# %@ · domain model": "# %@ · modèle du domaine",
         "## Conventions": "## Conventions",
         "## Decisions": "## Décisions",

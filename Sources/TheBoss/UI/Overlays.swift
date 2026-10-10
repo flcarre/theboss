@@ -7,6 +7,7 @@ struct RootView: View {
     var body: some View {
         ZStack {
             GameView(model: model)
+                .ignoresSafeArea()
             VStack {
                 HStack(alignment: .top) {
                     StatusHUD(model: model)
@@ -116,7 +117,8 @@ struct UsageHUD: View {
                             Text(provider.harness.displayName).font(Theme.label(13)).foregroundStyle(Theme.cream)
                                 .frame(width: 92, alignment: .leading)
                             Text(window.label).font(Theme.label(11, .medium)).foregroundStyle(Theme.textSecondary)
-                                .frame(width: 40, alignment: .leading)
+                                .lineLimit(1).fixedSize()
+                                .frame(minWidth: 40, alignment: .leading)
                             Gauge8(fraction: window.usedPercent / 100, color: gaugeColor(window.usedPercent))
                                 .frame(width: 110, height: 14)
                             Text("\(Int(window.usedPercent.rounded())) %").font(Theme.label(13, .bold)).foregroundStyle(Theme.cream)

@@ -26,9 +26,9 @@ public final class AgentMonitor: @unchecked Sendable {
         all += codex.sessions()
         all += pi.sessions()
         all += omp.sessions()
-        all += cursor.sessions()
         all += gemini.sessions()
         all += copilot.sessions()
+        all += cursor.sessions(knownDirectories: all.map(\.cwd))
         all.removeAll { $0.cwd.hasPrefix(ownDirectory) }
         return all.sorted {
             if $0.status.priority != $1.status.priority { return $0.status.priority < $1.status.priority }

@@ -274,6 +274,8 @@ final class RobotNode: SKNode {
         let folder = RobotLook.folder(for: session.harness)
         sprite.removeAllActions()
         sprite.position = .zero
+        emote.removeAllActions()
+        emote.isHidden = true
         let texture = Assets.texture("characters/\(folder)/rotations/\(facing.rawValue).png")
         sprite.texture = texture
         sprite.size = texture.size()

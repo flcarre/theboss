@@ -85,7 +85,7 @@ final class ClaudeSource {
         }
         for session in live where pathsById[session.sessionId] == nil {
             result.append(AgentSession(harness: .claude, sessionId: session.sessionId,
-                                       title: session.name ?? "Nouvelle session", cwd: session.cwd,
+                                       title: session.name ?? tr("New session"), cwd: session.cwd,
                                        status: Self.map(session.status) ?? .finished, startedAt: session.startedAt,
                                        updatedAt: session.updatedAt ?? Date(), pid: session.pid, isLive: true))
         }
@@ -207,7 +207,7 @@ final class ClaudeSource {
             if let blocks = message["content"] as? [[String: Any]] {
                 for block in blocks where block["type"] as? String == "tool_use" {
                     guard let id = block["id"] as? String else { continue }
-                    let name = block["name"] as? String ?? "outil"
+                    let name = block["name"] as? String ?? tr("tool")
                     let input = block["input"] as? [String: Any] ?? [:]
                     let detail = (input["command"] as? String) ?? (input["file_path"] as? String) ?? (input["description"] as? String) ?? ""
                     state.pendingTools[id] = (name, detail.singleLine.truncated(120), date)

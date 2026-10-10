@@ -286,6 +286,32 @@ struct BossCoreTests {
         #expect(sessions.contains { $0.harness == .cursor && $0.status == .working })
     }
 
+    @Test func cursorChatsGetTheirNameAndProject() throws {
+        let home = try makeHome()
+        let project = home.appendingPathComponent("code/my-shop")
+        try FileManager.default.createDirectory(at: project, withIntermediateDirectories: true)
+        let slug = project.path.dropFirst().replacingOccurrences(of: "/", with: "-")
+        try FileManager.default.createDirectory(at: home.appendingPathComponent(".cursor/projects/\(slug)"), withIntermediateDirectories: true)
+        let named = home.appendingPathComponent(".cursor/chats/\(CursorSource.workspaceHash(project.path))/chat-named/store.db")
+        let meta = Data(#"{"agentId":"chat-named","name":"Fix the cart total"}"#.utf8).map { String(format: "%02x", $0) }.joined()
+        try FileManager.default.createDirectory(at: named.deletingLastPathComponent(), withIntermediateDirectories: true)
+        let sqlite = Process()
+        sqlite.executableURL = URL(fileURLWithPath: "/usr/bin/sqlite3")
+        sqlite.arguments = [named.path, "CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT); INSERT INTO meta VALUES ('0', '\(meta)');"]
+        try sqlite.run()
+        sqlite.waitUntilExit()
+        try write("", to: home.appendingPathComponent(".cursor/chats/unknown/chat-blank/store.db"))
+
+        #expect(CursorSource.directory(fromSlug: String(slug)) == project.path)
+        let sessions = AgentMonitor().sessions().filter { $0.harness == .cursor }
+        let chat = try #require(sessions.first { $0.sessionId == "chat-named" })
+        #expect(chat.title == "Fix the cart total")
+        #expect(chat.cwd == project.path)
+        let blank = try #require(sessions.first { $0.sessionId == "chat-blank" })
+        #expect(blank.title == "Cursor chat chat-b")
+        #expect(blank.cwd.isEmpty)
+    }
+
     @Test func claudeUsageGaugeEndToEndWithStubbedApi() async throws {
         _ = try makeHome()
         try FileManager.default.createDirectory(at: Paths.claude, withIntermediateDirectories: true)

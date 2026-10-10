@@ -234,9 +234,13 @@ struct AgentTile: View {
                 HStack(spacing: 7) {
                     HarnessTag(harness: session.harness)
                     Text(session.projectName).font(Theme.label(12, .medium)).foregroundStyle(Theme.inkSoft).lineLimit(1)
-                    Spacer()
+                        .layoutPriority(1)
+                    Spacer(minLength: 4)
                     if session.tokens.total > 0 {
-                        Text(tr("%@ tokens", formatTokens(session.tokens.total))).font(Theme.label(12, .medium)).foregroundStyle(Theme.inkSoft.opacity(0.8))
+                        ViewThatFits(in: .horizontal) {
+                            tokenLabel(tr("%@ tokens", formatTokens(session.tokens.total)))
+                            tokenLabel(formatTokens(session.tokens.total))
+                        }
                     }
                 }
                 if let pending = session.pendingAction, session.status == .needsApproval {
@@ -253,6 +257,10 @@ struct AgentTile: View {
               border: session.status == .needsApproval ? Theme.warning : Theme.ink)
         .overlay(alignment: .leading) { Rectangle().fill(Theme.color(for: session.status)).frame(width: 5).padding(.vertical, 2).padding(.leading, 2) }
         .contentShape(Rectangle())
+    }
+
+    func tokenLabel(_ text: String) -> some View {
+        Text(text).font(Theme.label(12, .medium)).foregroundStyle(Theme.inkSoft.opacity(0.8)).lineLimit(1).fixedSize()
     }
 }
 

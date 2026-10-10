@@ -126,7 +126,7 @@ struct SettingsPanel: View {
                 settingsCard(tr("Privacy")) {
                     note(tr("Everything stays on your Mac. The Boss reads the transcripts of Claude Code (~/.claude), Codex (~/.codex), Gemini CLI (~/.gemini), Copilot CLI (~/.copilot), Cursor (~/.cursor), Pi (~/.pi) and omp (~/.omp), and keeps them in a local SQLite database."))
                     note(tr("Claude limits come from Anthropic's API with the Claude Code token read from the keychain; Codex limits are read from its logs. Nothing is sent anywhere else."))
-                    Text(Paths.appSupport.appendingPathComponent("boss.sqlite").path).font(Theme.mono(12)).foregroundStyle(Theme.inkSoft).textSelection(.enabled)
+                    Text(Paths.appSupport.appendingPathComponent("boss.sqlite").path.replacingOccurrences(of: Paths.home.path, with: "~")).font(Theme.mono(12)).foregroundStyle(Theme.inkSoft).textSelection(.enabled)
                 }
             }
             .padding(22)

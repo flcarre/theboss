@@ -43,6 +43,13 @@ ou un meuble.
 `BOSS_SCRIPT` pilote l'app pour les tests visuels (`wait:2;room:openSpace;snap:open;quit`, voir
 `Sources/TheBoss/DebugDriver.swift`) et `BOSS_SNAP_DIR` choisit où écrire les captures.
 
+## Site vitrine
+
+`site/` contient le site de présentation (Next.js, export statique, en anglais) avec un bureau jouable dans le
+navigateur. `cd site && npm install && npm run dev` pour le lancer, `npm run build` pour l'export dans `site/out`.
+Les captures de `site/public/assets/screens` viennent d'une copie traduite en anglais de l'app, nourrie de données
+fictives.
+
 ## Structure
 
 ```

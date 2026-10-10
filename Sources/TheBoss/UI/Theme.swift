@@ -55,6 +55,10 @@ enum Theme {
         }
     }
 
+    static func robotIcon(for harness: Harness) -> NSImage? {
+        Assets.trimmed("characters/\(RobotLook.folder(for: harness))/rotations/south.png")
+    }
+
     static func robotImage(for harness: Harness) -> NSImage? {
         Assets.image("characters/\(RobotLook.folder(for: harness))/rotations/south.png")
     }

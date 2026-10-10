@@ -1,6 +1,7 @@
 import AppKit
 import BossCore
 import SpriteKit
+import SwiftUI
 
 @MainActor
 enum DebugDriver {
@@ -60,6 +61,18 @@ enum DebugDriver {
                     if let first = model.openSuggestions.first(where: { $0.kind == .learnedRule }) { model.refine(first) }
                 case "zoom":
                     model.scene.setZoom(CGFloat(Double(parts[safe: 1] ?? "1") ?? 1))
+                case "snapmenu":
+                    let renderer = ImageRenderer(content: MenuBarContent(model: model).environment(\.colorScheme, .dark))
+                    renderer.scale = 2
+                    if let image = renderer.nsImage, let tiff = image.tiffRepresentation, let bitmap = NSBitmapImageRep(data: tiff) {
+                        try? bitmap.representation(using: .png, properties: [:])?.write(to: outDir.appendingPathComponent("menu.png"))
+                    }
+                    for alert in [false, true] {
+                        let icon = MenuBarIcon.image(alert: alert)
+                        if let tiff = icon.tiffRepresentation, let bitmap = NSBitmapImageRep(data: tiff) {
+                            try? bitmap.representation(using: .png, properties: [:])?.write(to: outDir.appendingPathComponent("menuicon-\(alert).png"))
+                        }
+                    }
                 case "quit":
                     NSApp.terminate(nil)
                 default:

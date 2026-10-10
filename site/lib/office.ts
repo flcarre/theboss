@@ -86,7 +86,7 @@ const ROUNDED = "ui-rounded, 'SF Pro Rounded', 'Nunito', system-ui, sans-serif";
 const STATUS_COLOR: Record<RobotState, string> = { working: "#4CD18A", waiting: "#FF9A2E", done: "#A8B0BD" };
 
 const SHADE_SCALE = 0.25;
-const FLOOR_URL = "/assets/tiles/wood.png";
+const FLOOR_URL = "/assets/tiles/carpet_openspace.png";
 const WALL_URL = "/assets/walls/wall_openspace.png";
 const ATTRACT_PAUSE = 1.6;
 const IDLE_BEFORE_ATTRACT = 9;
@@ -108,7 +108,6 @@ export class Office {
   private ctx: CanvasRenderingContext2D;
   private shade = document.createElement("canvas");
   private images = new Map<string, HTMLImageElement>();
-  private floor?: CanvasPattern;
   private colliders: Rect[] = [];
   private blocked: Uint8Array;
   private gridW = Math.ceil(WORLD_W / CELL);
@@ -260,7 +259,6 @@ export class Office {
     const all = [...objects, ...sheets, ...stills, ...bossStills, ...emotes, FLOOR_URL, WALL_URL];
     await Promise.all(all.map(async (src) => this.images.set(src, await loadImage(src))));
     await document.fonts.ready;
-    this.floor = this.ctx.createPattern(this.img(FLOOR_URL), "repeat") ?? undefined;
     this.ready = true;
     this.emitCounts();
     this.resize();
@@ -677,10 +675,7 @@ export class Office {
     ctx.setTransform(this.scale, 0, 0, this.scale, (offX - Math.round(this.cam.x) + sx) * this.scale, (offY - Math.round(this.cam.y) + sy) * this.scale);
     ctx.imageSmoothingEnabled = false;
 
-    if (this.floor) {
-      ctx.fillStyle = this.floor;
-      ctx.fillRect(0, WALL_BOTTOM, WORLD_W, WORLD_H - WALL_BOTTOM);
-    }
+    ctx.drawImage(this.img(FLOOR_URL), 0, WALL_BOTTOM);
     this.drawWall(ctx);
     PROPS.filter((p) => p.flat).forEach((p) => this.drawProp(ctx, p));
     PROPS.filter((p) => p.wall).forEach((p) => this.drawProp(ctx, p));

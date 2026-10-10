@@ -1,47 +1,65 @@
-import random
-from PIL import Image, ImageDraw
+import pathlib
 
-SIZE = 128
-PLANK = 16
-TONES = ["#B5703A", "#AE6A35", "#BC7740", "#A86532"]
-GAP = "#6E3A1C"
+from PIL import Image
 
-
-def rgba(hex_color, alpha=255):
-    h = hex_color.lstrip("#")
-    return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4)) + (alpha,)
+OUT = pathlib.Path(__file__).resolve().parent.parent / "public" / "assets" / "tiles"
+TILE = 64
+COLS = 18
+ROWS = 8
+MASK = 0xFFFFFFFF
 
 
-def wood(path, seed=7):
-    rand = random.Random(seed)
-    base = Image.new("RGBA", (SIZE, SIZE))
-    overlay = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(base)
-    shade = ImageDraw.Draw(overlay)
-    lengths = [64, 48, 80, 56]
-    for row in range(SIZE // PLANK):
-        y = row * PLANK
-        x = -((row % 2) * 48 + (row % 3) * 16)
-        i = row
-        while x < SIZE:
-            length = lengths[i % len(lengths)]
-            for dx in (0, SIZE):
-                left = x + dx if x < 0 else x
-                draw.rectangle([left, y, left + length - 1, y + PLANK - 1], fill=rgba(TONES[(i * 7 + row) % len(TONES)]))
-                shade.rectangle([left, y, left + length - 1, y + 1], fill=(255, 226, 170, 40))
-                shade.rectangle([left, y + PLANK - 3, left + length - 1, y + PLANK - 2], fill=(70, 30, 10, 46))
-                for _ in range(3):
-                    gy = y + 4 + rand.randrange(8)
-                    gx = left + 4 + rand.randrange(max(8, length - 24))
-                    shade.rectangle([gx, gy, gx + 6 + rand.randrange(14), gy], fill=(90, 40, 14, 72))
-                draw.rectangle([left + length - 1, y, left + length - 1, y + PLANK - 1], fill=rgba(GAP))
-                if x >= 0:
-                    break
-            x += length
-            i += 1
-        draw.rectangle([0, y + PLANK - 1, SIZE - 1, y + PLANK - 1], fill=rgba(GAP))
-    Image.alpha_composite(base, overlay).save(path)
+def noise(x: int, y: int, seed: int) -> int:
+    h = (x * 374761393 + y * 668265263 + seed * 2147483647) & MASK
+    h = ((h ^ (h >> 13)) * 1274126177) & MASK
+    return (h ^ (h >> 16)) & 0xFFFF
+
+
+def shade(hex_color: int, factor: float) -> int:
+    r = int(((hex_color >> 16) & 0xFF) * factor)
+    g = int(((hex_color >> 8) & 0xFF) * factor)
+    b = int((hex_color & 0xFF) * factor)
+    return (r << 16) | (g << 8) | b
+
+
+def rgb(hex_color: int):
+    return ((hex_color >> 16) & 0xFF, (hex_color >> 8) & 0xFF, hex_color & 0xFF, 255)
+
+
+def carpet(variant: int) -> Image.Image:
+    image = Image.new("RGBA", (TILE, TILE))
+    for y in range(TILE):
+        for x in range(TILE):
+            tile = ((x // 32) + (y // 32) + variant) % 2
+            base = 0x5B6B8C if tile == 0 else 0x55647F
+            n = noise(x + variant * 64, y, 11) % 100
+            color = base
+            if n < 18:
+                color = shade(base, 0.88)
+            if n > 92:
+                color = 0x6E7FA3
+            if tile == 0 and (x + y) % 8 == 0:
+                color = shade(base, 0.92)
+            if x % 32 == 0 or y % 32 == 0:
+                color = 0x46536C
+            image.putpixel((x, y), rgb(color))
+    return image
+
+
+def main():
+    OUT.mkdir(parents=True, exist_ok=True)
+    tiles = [carpet(v) for v in range(4)]
+    floor = Image.new("RGBA", (COLS * TILE, ROWS * TILE))
+    for c in range(COLS):
+        for r in range(ROWS):
+            variant = (c * 73 + r * 151 + c * r * 7) % 97 % 4
+            floor.paste(tiles[variant], (c * TILE, (ROWS - 1 - r) * TILE))
+    floor.save(OUT / "carpet_openspace.png", optimize=True)
+    pattern = Image.new("RGBA", (TILE * 2, TILE * 2))
+    for index, variant in enumerate([0, 2, 3, 1]):
+        pattern.paste(tiles[variant], ((index % 2) * TILE, (index // 2) * TILE))
+    pattern.save(OUT / "carpet.png", optimize=True)
 
 
 if __name__ == "__main__":
-    wood("public/assets/tiles/wood.png")
+    main()

@@ -1191,7 +1191,7 @@ h2 {
   padding-bottom: 26px;
   background:
     linear-gradient(180deg, rgba(16, 14, 28, 0.15), rgba(16, 14, 28, 0.6)),
-    url(/assets/tiles/wood.png) 0 0 / 128px 128px;
+    url(/assets/tiles/carpet.png) 0 0 / 128px 128px;
   image-rendering: pixelated;
   overflow: hidden;
 }
@@ -1333,7 +1333,7 @@ h2 {
   display: grid;
   place-items: center;
   min-height: 320px;
-  background: url(/assets/tiles/wood.png) 0 0 / 128px 128px;
+  background: url(/assets/tiles/carpet.png) 0 0 / 128px 128px;
   box-shadow: inset 0 0 0 3px var(--ink);
   image-rendering: pixelated;
   overflow: hidden;

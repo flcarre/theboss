@@ -1,5 +1,9 @@
 import Foundation
 
+enum FloorStyle {
+    case parquet, carpet
+}
+
 enum RoomID: String {
     case office, openSpace
 }
@@ -49,7 +53,7 @@ struct Room {
     var cols: Int
     var walkRows: Int
     var wall: WallStyle
-    var floorTiles: [String]
+    var floor: FloorStyle
     var props: [Prop]
     var exits: [Exit]
     var desks: [DeskSlot] = []
@@ -89,31 +93,31 @@ struct Room {
 
     static let office = Room(
         id: .office, cols: 12, walkRows: 7, wall: .office,
-        floorTiles: ["tbfc/floor/parquet_1.png", "tbfc/floor/parquet_2.png", "tbfc/floor/parquet_3.png", "tbfc/floor/parquet_4.png"],
+        floor: .parquet,
         props: [
-            Prop(name: "Fenêtre", texture: "objects/window_wall.png", x: 3.5, baseY: 7.3, interaction: .window,
+            Prop(name: "Window", texture: "objects/window_wall.png", x: 3.5, baseY: 7.3, interaction: .window,
                  interactCells: [Tile(c: 3, r: 7)], onWall: true),
-            Prop(name: "Porte", texture: "tbfc/decor/brique_mecanismes_porte_fermee.png", x: 10.5, baseY: 7.0, onWall: true),
-            Prop(name: "Tableau blanc", texture: "objects/whiteboard.png", x: 5.5, baseY: 6.0,
+            Prop(name: "Door", texture: "objects/door.png", x: 10.5, baseY: 7.0, onWall: true),
+            Prop(name: "Whiteboard", texture: "objects/whiteboard.png", x: 5.5, baseY: 6.0,
                  blocks: [Tile(c: 5, r: 6), Tile(c: 6, r: 6)], interaction: .analytics),
-            Prop(name: "Bibliothèque des règles", texture: "objects/bookshelf.png", x: 8.0, baseY: 6.0,
+            Prop(name: "Rules library", texture: "objects/bookshelf.png", x: 8.0, baseY: 6.0,
                  blocks: [Tile(c: 7, r: 6), Tile(c: 8, r: 6)], interaction: .library),
-            Prop(name: "Bannette", texture: "objects/intray.png", x: 1.5, baseY: 6.0,
+            Prop(name: "In-tray", texture: "objects/intray.png", x: 1.5, baseY: 6.0,
                  blocks: [Tile(c: 1, r: 6)], interaction: .inbox),
-            Prop(name: "Plante", texture: "tbfc/decor/decor_interieur_plante_en_pot.png", x: 0.5, baseY: 6.0,
+            Prop(name: "Plant", texture: "objects/plant.png", x: 0.5, baseY: 6.0,
                  blocks: [Tile(c: 0, r: 6)], interaction: .plant),
             Prop(name: "Archives", texture: "objects/archive_cabinet.png", x: 3.5, baseY: 6.0,
                  blocks: [Tile(c: 3, r: 6)], interaction: .archives),
-            Prop(name: "Plante", texture: "tbfc/decor/decor_interieur_plante_en_pot.png", x: 11.5, baseY: 6.0,
+            Prop(name: "Plant", texture: "objects/plant.png", x: 11.5, baseY: 6.0,
                  blocks: [Tile(c: 11, r: 6)], interaction: .plant),
-            Prop(name: "Tapis", texture: "tbfc/decor/decor_interieur_tapis.png", x: 6.0, baseY: 1.55, flat: true),
-            Prop(name: "Bureau du boss", texture: "objects/desk_boss.png", x: 6.0, baseY: 3.0,
+            Prop(name: "Rug", texture: "objects/rug.png", x: 6.0, baseY: 1.55, flat: true),
+            Prop(name: "Boss desk", texture: "objects/desk_boss.png", x: 6.0, baseY: 3.0,
                  blocks: [Tile(c: 5, r: 3), Tile(c: 6, r: 3), Tile(c: 5, r: 4), Tile(c: 6, r: 4)], interaction: .usage),
-            Prop(name: "Canapé", texture: "objects/sofa.png", x: 1.0, baseY: 1.0,
+            Prop(name: "Sofa", texture: "objects/sofa.png", x: 1.0, baseY: 1.0,
                  blocks: [Tile(c: 0, r: 1), Tile(c: 1, r: 1)], interaction: .sofa),
-            Prop(name: "Plante", texture: "tbfc/decor/decor_interieur_plante_en_pot.png", x: 2.5, baseY: 1.0,
+            Prop(name: "Plant", texture: "objects/plant.png", x: 2.5, baseY: 1.0,
                  blocks: [Tile(c: 2, r: 1)], interaction: .plant),
-            Prop(name: "Baie", texture: "objects/server_rack.png", x: 11.5, baseY: 1.0,
+            Prop(name: "Server rack", texture: "objects/server_rack.png", x: 11.5, baseY: 1.0,
                  blocks: [Tile(c: 11, r: 1)], interaction: .servers),
         ],
         exits: [Exit(trigger: Tile(c: 10, r: 6), direction: .north, to: .openSpace, spawn: Tile(c: 9, r: 0), spawnFacing: .north)]
@@ -130,37 +134,37 @@ struct Room {
         }
         return Room(
             id: .openSpace, cols: 20, walkRows: 10, wall: .openSpace,
-            floorTiles: ["tbfc/floor/damier_1.png", "tbfc/floor/damier_2.png", "tbfc/floor/damier_3.png", "tbfc/floor/damier_4.png"],
+            floor: .carpet,
             props: [
-                Prop(name: "Écran des agents", texture: "objects/wall_screen.png", x: 9.5, baseY: 10.15,
+                Prop(name: "Agent board", texture: "objects/wall_screen.png", x: 9.5, baseY: 10.15,
                      interaction: .overview, interactCells: [Tile(c: 8, r: 10), Tile(c: 9, r: 10), Tile(c: 10, r: 10)], onWall: true),
-                Prop(name: "Fenêtre", texture: "objects/window_wall.png", x: 4.5, baseY: 10.3, interaction: .window,
+                Prop(name: "Window", texture: "objects/window_wall.png", x: 4.5, baseY: 10.3, interaction: .window,
                      interactCells: [Tile(c: 4, r: 10)], onWall: true),
-                Prop(name: "Fenêtre", texture: "objects/window_wall.png", x: 14.5, baseY: 10.3, interaction: .window,
+                Prop(name: "Window", texture: "objects/window_wall.png", x: 14.5, baseY: 10.3, interaction: .window,
                      interactCells: [Tile(c: 14, r: 10)], onWall: true),
-                Prop(name: "Baie", texture: "objects/server_rack.png", x: 0.5, baseY: 9.0,
+                Prop(name: "Server rack", texture: "objects/server_rack.png", x: 0.5, baseY: 9.0,
                      blocks: [Tile(c: 0, r: 9)], interaction: .servers),
-                Prop(name: "Baie", texture: "objects/server_rack.png", x: 1.5, baseY: 9.0,
+                Prop(name: "Server rack", texture: "objects/server_rack.png", x: 1.5, baseY: 9.0,
                      blocks: [Tile(c: 1, r: 9)], interaction: .servers),
-                Prop(name: "Fontaine", texture: "objects/water_cooler.png", x: 17.5, baseY: 9.0,
+                Prop(name: "Water cooler", texture: "objects/water_cooler.png", x: 17.5, baseY: 9.0,
                      blocks: [Tile(c: 17, r: 9)], interaction: .water),
-                Prop(name: "Machine à café", texture: "objects/coffee_machine.png", x: 18.5, baseY: 9.0,
+                Prop(name: "Coffee machine", texture: "objects/coffee_machine.png", x: 18.5, baseY: 9.0,
                      blocks: [Tile(c: 18, r: 9)], interaction: .coffee),
-                Prop(name: "Plante", texture: "tbfc/decor/decor_interieur_plante_en_pot.png", x: 19.5, baseY: 9.0,
+                Prop(name: "Plant", texture: "objects/plant.png", x: 19.5, baseY: 9.0,
                      blocks: [Tile(c: 19, r: 9)], interaction: .plant),
-                Prop(name: "Canapé", texture: "objects/sofa.png", x: 18.0, baseY: 0.2,
+                Prop(name: "Sofa", texture: "objects/sofa.png", x: 18.0, baseY: 0.2,
                      blocks: [Tile(c: 17, r: 0), Tile(c: 18, r: 0)], interaction: .sofa),
-                Prop(name: "Plante", texture: "tbfc/decor/decor_interieur_plante_en_pot.png", x: 19.5, baseY: 0.0,
+                Prop(name: "Plant", texture: "objects/plant.png", x: 19.5, baseY: 0.0,
                      blocks: [Tile(c: 19, r: 0)], interaction: .plant),
-                Prop(name: "Plante", texture: "tbfc/decor/decor_interieur_plante_en_pot.png", x: 0.5, baseY: 0.0,
+                Prop(name: "Plant", texture: "objects/plant.png", x: 0.5, baseY: 0.0,
                      blocks: [Tile(c: 0, r: 0)], interaction: .plant),
-                Prop(name: "Plante", texture: "tbfc/decor/decor_interieur_plante_en_pot.png", x: 0.5, baseY: 5.0,
+                Prop(name: "Plant", texture: "objects/plant.png", x: 0.5, baseY: 5.0,
                      blocks: [Tile(c: 0, r: 5)], interaction: .plant),
-                Prop(name: "Plante", texture: "tbfc/decor/decor_interieur_plante_en_pot.png", x: 19.5, baseY: 5.0,
+                Prop(name: "Plant", texture: "objects/plant.png", x: 19.5, baseY: 5.0,
                      blocks: [Tile(c: 19, r: 5)], interaction: .plant),
-                Prop(name: "Tapis", texture: "tbfc/decor/decor_interieur_tapis.png", x: 9.5, baseY: 5.6, flat: true),
-                Prop(name: "Tapis", texture: "tbfc/decor/decor_interieur_tapis.png", x: 9.5, baseY: 2.6, flat: true),
-                Prop(name: "Canapé", texture: "objects/sofa.png", x: 9.5, baseY: 9.0,
+                Prop(name: "Rug", texture: "objects/rug.png", x: 9.5, baseY: 5.6, flat: true),
+                Prop(name: "Rug", texture: "objects/rug.png", x: 9.5, baseY: 2.6, flat: true),
+                Prop(name: "Sofa", texture: "objects/sofa.png", x: 9.5, baseY: 9.0,
                      blocks: [Tile(c: 9, r: 9)], interaction: .sofa),
             ],
             exits: [Exit(trigger: Tile(c: 9, r: 0), direction: .south, to: .office, spawn: Tile(c: 10, r: 6), spawnFacing: .south)],

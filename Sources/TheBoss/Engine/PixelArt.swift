@@ -188,3 +188,230 @@ enum PixelArt {
         return (r << 16) | (g << 8) | b
     }
 }
+
+enum ProceduralArt {
+    nonisolated(unsafe) private static var cache: [String: SKTexture] = [:]
+    nonisolated(unsafe) private static var images: [String: NSImage] = [:]
+
+    static func cached(_ key: String, _ make: () -> PixelCanvas) -> SKTexture {
+        if let texture = cache[key] { return texture }
+        let texture = make().texture
+        cache[key] = texture
+        return texture
+    }
+
+    static func image(_ key: String, scale: Int = 1, _ make: () -> PixelCanvas) -> NSImage {
+        if let image = images[key] { return image }
+        let canvas = make()
+        let image = NSImage(cgImage: canvas.cgImage, size: NSSize(width: canvas.width * scale, height: canvas.height * scale))
+        images[key] = image
+        return image
+    }
+
+    static func noise(_ x: Int, _ y: Int, _ seed: Int) -> Int {
+        var h = UInt32(truncatingIfNeeded: x &* 374761393 &+ y &* 668265263 &+ seed &* 2147483647)
+        h = (h ^ (h >> 13)) &* 1274126177
+        return Int(h ^ (h >> 16)) & 0xFFFF
+    }
+
+    static func parquet(variant: Int) -> SKTexture {
+        cached("parquet\(variant)") {
+            var c = PixelCanvas(width: 64, height: 64)
+            let shades: [UInt32] = [0xB9783F, 0xA9693A, 0xC5864A, 0xAE7041]
+            for row in 0..<4 {
+                let y0 = row * 16
+                let offset = ((row + variant) % 2) * 32 + (variant * 11 + row * 7) % 16
+                for x in 0..<64 {
+                    let plank = ((x + offset) / 48)
+                    let base = shades[(plank + row + variant) % shades.count]
+                    for y in y0..<(y0 + 16) {
+                        var color = RGBA(base)
+                        let n = noise(x + variant * 64, y, 7) % 100
+                        if n < 7 { color = RGBA(PixelArt.shade(base, 0.86)) }
+                        if (y - y0) == 5 || (y - y0) == 11, noise(x / 6, y, plank) % 3 == 0 { color = RGBA(PixelArt.shade(base, 0.9)) }
+                        c.set(x, y, color)
+                    }
+                    if (x + offset) % 48 == 0 {
+                        for y in y0..<(y0 + 16) { c.set(x, y, RGBA(0x5A3420)) }
+                    }
+                }
+                for x in 0..<64 { c.set(x, y0 + 15, RGBA(0x6B3F25)) }
+                for x in 0..<64 where noise(x, y0, 3) % 5 != 0 { c.set(x, y0, RGBA(0xD3965A)) }
+            }
+            return c
+        }
+    }
+
+    static func carpet(variant: Int) -> SKTexture {
+        cached("carpet\(variant)") {
+            var c = PixelCanvas(width: 64, height: 64)
+            for y in 0..<64 {
+                for x in 0..<64 {
+                    let tile = ((x / 32) + (y / 32) + variant) % 2
+                    let base: UInt32 = tile == 0 ? 0x5B6B8C : 0x55647F
+                    let n = noise(x + variant * 64, y, 11) % 100
+                    var color = base
+                    if n < 18 { color = PixelArt.shade(base, 0.88) }
+                    if n > 92 { color = 0x6E7FA3 }
+                    if tile == 0, (x + y) % 8 == 0 { color = PixelArt.shade(base, 0.92) }
+                    if x % 32 == 0 || y % 32 == 0 { color = 0x46536C }
+                    c.set(x, y, RGBA(color))
+                }
+            }
+            return c
+        }
+    }
+
+    static let bubbleShape = [
+        "..XXXXXXXXXXXXXXXXXX..",
+        ".XWWWWWWWWWWWWWWWWWWX.",
+        "XWWWWWWWWWWWWWWWWWWWWX",
+        "XWWWWWWWWWWWWWWWWWWWWX",
+        "XWWWWWWWWWWWWWWWWWWWWX",
+        "XWWWWWWWWWWWWWWWWWWWWX",
+        "XWWWWWWWWWWWWWWWWWWWWX",
+        "XWWWWWWWWWWWWWWWWWWWWX",
+        "XWWWWWWWWWWWWWWWWWWWWX",
+        "XWWWWWWWWWWWWWWWWWWWWX",
+        "XWWWWWWWWWWWWWWWWWWWWX",
+        "XWWWWWWWWWWWWWWWWWWWWX",
+        "XSWWWWWWWWWWWWWWWWWWSX",
+        ".XSSSSSWWWWWSSSSSSSSX.",
+        "..XXXXXXSWWSXXXXXXXX..",
+        ".......XSWSX..........",
+        "........XSX...........",
+        ".........X............",
+    ]
+
+    static func bubble(_ glyph: [String], color: UInt32) -> PixelCanvas {
+        var c = PixelCanvas(width: 22, height: 18)
+        for (y, row) in bubbleShape.enumerated() {
+            for (x, ch) in row.enumerated() {
+                switch ch {
+                case "X": c.set(x, y, PixelArt.outline)
+                case "W": c.set(x, y, RGBA(0xFFF6EC))
+                case "S": c.set(x, y, RGBA(0xD9CFC2))
+                default: break
+                }
+            }
+        }
+        let originX = (22 - (glyph.first?.count ?? 0)) / 2
+        for (y, row) in glyph.enumerated() {
+            for (x, ch) in row.enumerated() where ch == "#" { c.set(originX + x, 2 + y, RGBA(color)) }
+            for (x, ch) in row.enumerated() where ch == "o" { c.set(originX + x, 2 + y, RGBA(PixelArt.shade(color, 0.7))) }
+        }
+        return c
+    }
+
+    static var exclamation: SKTexture {
+        cached("bubble!") {
+            bubble(["..##..", ".####.", ".####.", ".####.", "..##..", "..##..", "..oo..", "......", "..##..", "..oo.."], color: 0xF0532E)
+        }
+    }
+
+    static var sleeping: SKTexture {
+        cached("bubbleZ") {
+            bubble(["......#####", ".........#.", "........#..", ".......####", "####.......", "..#........", ".#.........", "####......."], color: 0x4F7BD9)
+        }
+    }
+
+    static func sparkle(frame: Int) -> SKTexture {
+        cached("sparkle\(frame)") {
+            var c = PixelCanvas(width: 48, height: 48)
+            let radius = 4 + frame * 4
+            let colors: [UInt32] = [0xFFF6EC, 0xF5B942, 0x7FD8FF]
+            for i in 0..<8 {
+                let angle = Double(i) * .pi / 4 + Double(frame) * 0.3
+                let x = 24 + Int(Double(radius) * cos(angle)), y = 24 + Int(Double(radius) * sin(angle))
+                let color = RGBA(colors[(i + frame) % colors.count], alpha: frame > 4 ? 140 : 255)
+                c.rect(x - 1, y, 3, 1, color)
+                c.rect(x, y - 1, 1, 3, color)
+            }
+            return c
+        }
+    }
+
+    static func smoke(frame: Int) -> SKTexture {
+        cached("smoke\(frame)") {
+            var c = PixelCanvas(width: 48, height: 48)
+            let radius = Double(6 + frame * 3)
+            for y in 0..<48 {
+                for x in 0..<48 {
+                    for puff in 0..<3 {
+                        let cx = 24.0 + Double(puff - 1) * radius * 0.7, cy = 30.0 - Double(frame * 2) - Double(puff % 2) * 4
+                        let d = ((Double(x) - cx) * (Double(x) - cx) + (Double(y) - cy) * (Double(y) - cy)).squareRoot()
+                        if d < radius * 0.55 {
+                            let alpha = UInt8(max(0, 200 - frame * 32))
+                            c.set(x, y, RGBA(d < radius * 0.35 ? 0xE9E4F7 : 0xB9B0D6, alpha: alpha))
+                        }
+                    }
+                }
+            }
+            return c
+        }
+    }
+
+    static var sweat: SKTexture {
+        cached("sweat") {
+            glyph(["...X...", "..XwX..", ".Xw#oX.", "Xw##ooX", "X####oX", "X###ooX", ".XoooX.", "..XXX.."], color: 0x7FC8F0, size: 9)
+        }
+    }
+
+    static func crack(frame: Int) -> SKTexture {
+        cached("crack\(frame)") {
+            var c = PixelCanvas(width: 56, height: 56)
+            let reach = 8 + frame * 7
+            let colors: [UInt32] = [0xFFF6EC, 0xF5B942, 0xF0532E]
+            for i in 0..<10 {
+                let angle = Double(i) * .pi / 5 + 0.2
+                for r in stride(from: max(2, reach - 10), to: reach, by: 1) {
+                    let x = 28 + Int(Double(r) * cos(angle)), y = 28 + Int(Double(r) * sin(angle))
+                    c.set(x, y, RGBA(colors[(i + frame) % colors.count], alpha: frame > 3 ? 120 : 255))
+                }
+            }
+            if frame < 3 { c.rect(25, 25, 6, 6, RGBA(0xFFF6EC)) }
+            return c
+        }
+    }
+
+    static func glyph(_ rows: [String], color: UInt32, size: Int = 16) -> PixelCanvas {
+        var c = PixelCanvas(width: size, height: size)
+        let ox = (size - (rows.first?.count ?? 0)) / 2, oy = (size - rows.count) / 2
+        for (y, row) in rows.enumerated() {
+            for (x, ch) in row.enumerated() {
+                switch ch {
+                case "#": c.set(ox + x, oy + y, RGBA(color))
+                case "X": c.set(ox + x, oy + y, PixelArt.outline)
+                case "o": c.set(ox + x, oy + y, RGBA(PixelArt.shade(color, 0.7)))
+                case "w": c.set(ox + x, oy + y, RGBA(0xFFF6EC))
+                default: break
+                }
+            }
+        }
+        return c
+    }
+
+    static var closeIcon: NSImage {
+        image("close", scale: 2) {
+            glyph(["XX......XX", "X#X....X#X", ".X#X..X#X.", "..X#XX#X..", "...X##X...", "...X##X...", "..X#XX#X..", ".X#X..X#X.", "X#X....X#X", "XX......XX"], color: 0xF0532E)
+        }
+    }
+
+    static var backIcon: NSImage {
+        image("back", scale: 2) {
+            glyph(["....XX......", "...X#X......", "..X##XXXXXX.", ".X########X.", "X#########oX", ".X###oooooX.", "..X#oXXXXX..", "...XoX......", "....XX......"], color: 0xF5B942)
+        }
+    }
+
+    static var searchIcon: NSImage {
+        image("search", scale: 2) {
+            glyph(["..XXXX....", ".XwwwwX...", "Xww##wwX..", "Xw#..#wX..", "Xw#..#wX..", ".Xw##wX...", "..XXXXoX..", "......XoX.", ".......XoX", "........XX"], color: 0x7FB3E0)
+        }
+    }
+
+    static var bellIcon: NSImage {
+        image("bell", scale: 2) {
+            glyph(["....XX....", "...X##X...", "..X####X..", ".X######X.", ".X######X.", ".X######X.", "X########X", "XooooooooX", ".XXXXXXXX.", "....XX...."], color: 0xF5B942)
+        }
+    }
+}

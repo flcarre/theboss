@@ -3,18 +3,6 @@ import BossCore
 import SwiftUI
 
 enum Theme {
-    nonisolated(unsafe) static var pixelFontName = "PixelifySans-Regular"
-
-    static func registerFonts() {
-        let url = Assets.url("fonts/PixelifySans.ttf")
-        CTFontManagerRegisterFontsForURL(url as CFURL, .process, nil)
-        if let descriptors = CTFontManagerCreateFontDescriptorsFromURL(url as CFURL) as? [CTFontDescriptor],
-           let first = descriptors.first,
-           let name = CTFontDescriptorCopyAttribute(first, kCTFontNameAttribute) as? String {
-            pixelFontName = name
-        }
-    }
-
     static let ink = Color(hex: 0x2A1840)
     static let night = Color(hex: 0x1E1A33)
     static let base = Color(hex: 0x2B2547)
@@ -32,8 +20,19 @@ enum Theme {
     static let info = Color(hex: 0x4FB3FF)
     static let muted = Color(hex: 0xA8B0BD)
 
-    static func pixel(_ size: CGFloat) -> Font { .custom(pixelFontName, size: size) }
+    static let inkSoft = Color(hex: 0x4A3D66)
+    static let card = Color(hex: 0xFFFDF8)
+    static let line = Color(hex: 0x2A1840, alpha: 0.14)
+
+    static func title(_ size: CGFloat) -> Font { .system(size: size, weight: .black, design: .rounded) }
+    static func label(_ size: CGFloat, _ weight: Font.Weight = .semibold) -> Font { .system(size: size, weight: weight, design: .rounded) }
     static func body(_ size: CGFloat = 14, weight: Font.Weight = .regular) -> Font { .system(size: size, weight: weight, design: .rounded) }
+
+    static func roundedFontName(size: CGFloat, weight: NSFont.Weight) -> String {
+        let base = NSFont.systemFont(ofSize: size, weight: weight)
+        let rounded = base.fontDescriptor.withDesign(.rounded).flatMap { NSFont(descriptor: $0, size: size) }
+        return (rounded ?? base).fontName
+    }
     static func mono(_ size: CGFloat = 12) -> Font { .system(size: size, design: .monospaced) }
 
     static func color(for status: AgentStatus) -> Color {
@@ -48,6 +47,8 @@ enum Theme {
         switch harness {
         case .claude: Color(hex: 0xD9773F)
         case .codex: Color(hex: 0x3FBFA8)
+        case .gemini: Color(hex: 0x4F7BD9)
+        case .copilot: Color(hex: 0x8A63D2)
         case .cursor: Color(hex: 0x9AA3AD)
         case .pi: Color(hex: 0x8C6BF2)
         case .omp: Color(hex: 0x5BD16E)
@@ -109,7 +110,24 @@ struct PixelRect: Shape {
     }
 }
 
+struct CardStyle: ViewModifier {
+    var fill: Color
+    var border: Color
+    var lift: CGFloat
+
+    func body(content: Content) -> some View {
+        content
+            .background(fill)
+            .overlay(Rectangle().stroke(border, lineWidth: 2))
+            .background(Rectangle().fill(Theme.ink.opacity(0.18)).offset(x: lift, y: lift))
+    }
+}
+
 extension View {
+    func card(fill: Color = Theme.card, border: Color = Theme.ink, lift: CGFloat = 3) -> some View {
+        modifier(CardStyle(fill: fill, border: border, lift: lift))
+    }
+
     func pixelFrame(fill: Color = Theme.cream, accent: Color = Theme.crust, padding: CGFloat = 14) -> some View {
         modifier(PixelFrame(fill: fill, accent: accent, padding: padding))
     }
@@ -125,7 +143,7 @@ struct PixelImage: View {
 
     var body: some View {
         if let image {
-            Image(nsImage: image).interpolation(.none).resizable().scaledToFit().frame(width: size, height: size)
+            Image(nsImage: image).interpolation(.none).resizable().aspectRatio(contentMode: .fit).frame(width: size, height: size)
         } else {
             Color.clear.frame(width: size, height: size)
         }
@@ -141,10 +159,12 @@ struct PixelButton: View {
     var body: some View {
         Button(action: action) {
             Text(title)
-                .font(Theme.pixel(15))
+                .font(Theme.label(14, .bold))
                 .foregroundStyle(textColor)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
+                .lineLimit(1)
+                .fixedSize()
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
                 .background(
                     ZStack {
                         PixelRect(step: 3).fill(Theme.ink)
@@ -161,7 +181,7 @@ struct StatusDot: View {
     var status: AgentStatus
 
     var body: some View {
-        Rectangle().fill(Theme.color(for: status)).frame(width: 10, height: 10)
+        Rectangle().fill(Theme.color(for: status)).frame(width: 11, height: 11)
             .overlay(Rectangle().stroke(Theme.ink, lineWidth: 2))
     }
 }
@@ -186,6 +206,22 @@ struct Gauge8: View {
     }
 }
 
+enum Icon {
+    static var agents: NSImage? { Assets.trimmed("icons/agents.png") }
+    static var mail: NSImage? { Assets.trimmed("icons/mail.png") }
+    static var usage: NSImage? { Assets.trimmed("icons/usage.png") }
+    static var rules: NSImage? { Assets.trimmed("icons/rules.png") }
+    static var stats: NSImage? { Assets.trimmed("icons/stats.png") }
+    static var settings: NSImage? { Assets.trimmed("icons/settings.png") }
+    static var domain: NSImage? { Assets.trimmed("icons/domain.png") }
+    static var logbook: NSImage? { Assets.trimmed("icons/logbook.png") }
+    static var back: NSImage? { ProceduralArt.backIcon }
+    static var close: NSImage? { ProceduralArt.closeIcon }
+    static var search: NSImage? { ProceduralArt.searchIcon }
+    static var bell: NSImage? { ProceduralArt.bellIcon }
+    static var sleeping: NSImage? { ProceduralArt.image("sleepBubble", scale: 3) { ProceduralArt.bubble(["......#####", ".........#.", "........#..", ".......####", "####.......", "..#........", ".#.........", "####......."], color: 0x4F7BD9) } }
+}
+
 func gaugeColor(_ percent: Double) -> Color {
     percent >= 90 ? Theme.danger : percent >= 70 ? Theme.warning : Theme.success
 }
@@ -202,7 +238,7 @@ func formatTokens(_ value: Int) -> String {
 func relative(_ date: Date?) -> String {
     guard let date else { return "—" }
     let formatter = RelativeDateTimeFormatter()
-    formatter.locale = Locale(identifier: "fr_FR")
+    formatter.locale = Localizer.language.locale
     formatter.unitsStyle = .short
     return formatter.localizedString(for: date, relativeTo: Date())
 }

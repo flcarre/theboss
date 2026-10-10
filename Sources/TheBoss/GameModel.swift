@@ -24,27 +24,46 @@ struct Dialog: Identifiable {
 }
 
 enum MenuEntry: String, CaseIterable, Identifiable {
-    case agents = "Agents"
-    case inbox = "Courrier"
-    case usage = "Usage"
-    case rules = "Règles"
-    case stats = "Stats"
-    case domain = "Domaine"
-    case settings = "Réglages"
-    case close = "Retour"
+    case agents, inbox, usage, rules, stats, domain, settings, close
+
+    var title: String {
+        switch self {
+        case .agents: tr("Agents")
+        case .inbox: tr("Mail")
+        case .usage: tr("Usage")
+        case .rules: tr("Rules")
+        case .stats: tr("Stats")
+        case .domain: tr("Domain")
+        case .settings: tr("Settings")
+        case .close: tr("Back")
+        }
+    }
 
     var id: String { rawValue }
 
-    var icon: String {
+    var subtitle: String {
         switch self {
-        case .agents: "tbfc/icons/icones_ecrans_equipe.png"
-        case .inbox: "tbfc/icons/icones_ecrans_messages.png"
-        case .usage: "tbfc/icons/icones_ecrans_classement.png"
-        case .rules: "tbfc/icons/icones_ecrans_quetes.png"
-        case .stats: "tbfc/icons/icones_ecrans_succes.png"
-        case .domain: "tbfc/icons/icones_ecrans_carte.png"
-        case .settings: "tbfc/icons/icones_ecrans_parametres.png"
-        case .close: "tbfc/icons/icones_actions_retour.png"
+        case .agents: tr("All your robots and their status")
+        case .inbox: tr("Suggestions to review")
+        case .usage: tr("Plan limits, tokens")
+        case .rules: tr("Rules, skills, hooks")
+        case .stats: tr("Corrections and trend")
+        case .domain: tr("Domain model per project")
+        case .settings: tr("Language, sound, zoom")
+        case .close: tr("Close the menu")
+        }
+    }
+
+    var icon: NSImage? {
+        switch self {
+        case .agents: Icon.agents
+        case .inbox: Icon.mail
+        case .usage: Icon.usage
+        case .rules: Icon.rules
+        case .stats: Icon.stats
+        case .domain: Icon.domain
+        case .settings: Icon.settings
+        case .close: Icon.back
         }
     }
 }
@@ -86,6 +105,7 @@ final class GameModel: ObservableObject, WorldSceneDelegate {
         var zoom: Double = 1.5
         var finishedHours: Double = 6
         var autoRefine = false
+        var language: AppLanguage = .english
 
         init() {}
 
@@ -96,6 +116,7 @@ final class GameModel: ObservableObject, WorldSceneDelegate {
             zoom = try container.decodeIfPresent(Double.self, forKey: .zoom) ?? 1.5
             finishedHours = try container.decodeIfPresent(Double.self, forKey: .finishedHours) ?? 6
             autoRefine = try container.decodeIfPresent(Bool.self, forKey: .autoRefine) ?? false
+            language = try container.decodeIfPresent(AppLanguage.self, forKey: .language) ?? .english
         }
     }
 
@@ -105,13 +126,13 @@ final class GameModel: ObservableObject, WorldSceneDelegate {
     func openClaudeLogin() {
         let script = Paths.appSupport.appendingPathComponent("claude-login.command")
         let claude = RuleWriter.claudeExecutable() ?? "claude"
-        let body = "#!/bin/sh\n\(SessionLauncher.shellQuote(claude)) auth login\necho\necho \"Tu peux fermer cette fenêtre et revenir dans The Boss.\"\n"
+        let body = "#!/bin/sh\n\(SessionLauncher.shellQuote(claude)) auth login\necho\necho \"\(tr("You can close this window and go back to The Boss."))\"\n"
         do {
             try body.write(to: script, atomically: true, encoding: .utf8)
             try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: script.path)
             NSWorkspace.shared.open(script)
         } catch {
-            showToast("Impossible d'ouvrir le Terminal : \(error.localizedDescription)")
+            showToast(tr("Could not open Terminal: %@", error.localizedDescription))
         }
     }
 
@@ -122,7 +143,7 @@ final class GameModel: ObservableObject, WorldSceneDelegate {
             let ok = await RuleWriter.refreshClaudeLogin()
             self.usageService.forgetClaudeCredentials()
             self.repairingClaude = false
-            self.showToast(ok ? "Jeton Claude rafraîchi" : "Claude Code n'a pas pu se reconnecter : lance `claude auth login`")
+            self.showToast(ok ? tr("Claude token refreshed") : tr("Claude Code could not reconnect: run `claude auth login`"))
             self.refreshUsage(force: true)
         }
     }
@@ -138,9 +159,9 @@ final class GameModel: ObservableObject, WorldSceneDelegate {
                 guard let index = self.suggestions.firstIndex(where: { $0.id == suggestion.id }) else { return }
                 self.suggestions[index].refine(with: rule)
                 self.store.save(self.suggestions[index])
-                self.showToast("Règle reformulée par Claude")
+                self.showToast(tr("Rule rewritten by Claude"))
             case .success(nil):
-                self.showToast("Claude ne voit pas de règle générale ici")
+                self.showToast(tr("Claude sees no general rule here"))
             case .failure(let error):
                 self.showToast(error.localizedDescription)
             }
@@ -149,7 +170,10 @@ final class GameModel: ObservableObject, WorldSceneDelegate {
 
     init() {
         let stored = Store().setting("settings").flatMap { try? JSONDecoder().decode(Settings.self, from: Data($0.utf8)) }
-        settings = stored ?? Settings()
+        whipCount = Int(Store().setting("whips") ?? "") ?? 0
+        let initial = stored ?? Settings()
+        Localizer.language = initial.language
+        settings = initial
         scene = WorldScene(size: CGSize(width: 1280, height: 800))
         scene.controller = self
         scene.setZoom(settings.zoom)
@@ -177,6 +201,10 @@ final class GameModel: ObservableObject, WorldSceneDelegate {
     }
 
     func saveSettings() {
+        if Localizer.language != settings.language {
+            Localizer.language = settings.language
+            refreshInsights()
+        }
         if let data = try? JSONEncoder().encode(settings), let text = String(data: data, encoding: .utf8) {
             store.setSetting("settings", text)
         }
@@ -207,11 +235,11 @@ final class GameModel: ObservableObject, WorldSceneDelegate {
         applyFloor()
         NSApp.dockTile.badgeLabel = needsYou.isEmpty ? nil : "\(needsYou.count)"
         for session in newlyWaiting {
-            notify(title: "\(session.harness.displayName) attend ton feu vert", body: session.title, sound: "Glass")
-            showToast("⚠ \(session.projectName) : un robot attend ton feu vert")
+            notify(title: tr("%@ needs your approval", session.harness.displayName), body: session.title, sound: "Glass")
+            showToast(tr("%@: a robot needs your approval", session.projectName))
         }
         for session in newlyDone {
-            notify(title: "\(session.harness.displayName) a fini", body: session.title, sound: "Tink")
+            notify(title: tr("%@ is done", session.harness.displayName), body: session.title, sound: "Tink")
         }
     }
 
@@ -272,7 +300,7 @@ final class GameModel: ObservableObject, WorldSceneDelegate {
                 self.analytics = analytics
                 let added = self.openSuggestions.filter { !before.contains($0.id) }
                 if self.insightsReady && !added.isEmpty {
-                    self.notify(title: "Nouveau courrier", body: added[0].title, sound: "Pop")
+                    self.notify(title: tr("New mail"), body: added[0].title, sound: "Pop")
                 }
                 self.insightsReady = true
                 self.insightsRunning = false
@@ -292,7 +320,7 @@ final class GameModel: ObservableObject, WorldSceneDelegate {
             do {
                 try suggestion.apply()
             } catch {
-                showToast("Impossible d'écrire \(suggestion.displayPath) : \(error.localizedDescription)")
+                showToast(tr("Could not write %@: %@", suggestion.displayPath, error.localizedDescription))
                 return
             }
         }
@@ -301,9 +329,9 @@ final class GameModel: ObservableObject, WorldSceneDelegate {
         if let index = suggestions.firstIndex(where: { $0.id == suggestion.id }) { suggestions[index] = copy }
         applyFloor()
         switch status {
-        case .applied: showToast("Règle écrite dans \(suggestion.displayPath)"); play("Glass")
-        case .saved: showToast("Gardée pour plus tard")
-        case .dismissed: showToast("Suggestion ignorée")
+        case .applied: showToast(tr("Written to %@", suggestion.displayPath)); play("Glass")
+        case .saved: showToast(tr("Saved for later"))
+        case .dismissed: showToast(tr("Suggestion dismissed"))
         case .new: break
         }
     }
@@ -323,10 +351,10 @@ final class GameModel: ObservableObject, WorldSceneDelegate {
         do {
             try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
             try model.markdown.write(to: url, atomically: true, encoding: .utf8)
-            showToast("Modèle écrit dans \(model.name)/.boss/domain.md")
+            showToast(tr("Model written to %@", "\(model.name)/.boss/domain.md"))
             play("Glass")
         } catch {
-            showToast("Écriture impossible : \(error.localizedDescription)")
+            showToast(tr("Could not write: %@", error.localizedDescription))
         }
     }
 
@@ -335,6 +363,24 @@ final class GameModel: ObservableObject, WorldSceneDelegate {
     }
 
     func session(id: String) -> AgentSession? { sessions.first { $0.id == id } }
+
+    @Published private(set) var whipCount = 0
+
+    func world(didWhip session: AgentSession?) {
+        play("Pop")
+        whipCount += 1
+        store.setSetting("whips", "\(whipCount)")
+        guard let session else { return }
+        switch session.status {
+        case .needsApproval:
+            showToast(tr("%@ jumps: taking you to its session to approve.", RobotName.of(session)))
+            focus(session)
+        case .working:
+            showToast(tr("%@ types twice as fast. For a while.", RobotName.of(session)))
+        case .finished:
+            showToast(tr("%@ wakes up with a start. It had already finished.", RobotName.of(session)))
+        }
+    }
 
     func world(didEnter room: RoomID) {
         self.room = room
@@ -356,69 +402,75 @@ final class GameModel: ObservableObject, WorldSceneDelegate {
         case .archives: open(.domain)
         case .inbox:
             if !insightsReady {
-                say(nil, ["Le facteur trie encore le courrier… (analyse de tes conversations en cours)"])
+                say(nil, [tr("The mailman is still sorting the mail… (reading your conversations)")])
             } else if openSuggestions.isEmpty && !suggestions.contains(where: { $0.status == .saved }) {
-                say(nil, ["La bannette est vide.", "Tes agents n'ont rien appris de nouveau cette semaine. Corrige-les et le courrier arrivera."],
-                    choices: [DialogChoice(title: "Voir l'historique") { [weak self] in self?.open(.inbox) }, DialogChoice(title: "Fermer") {}])
+                say(nil, [tr("The in-tray is empty."), tr("Your agents learned nothing new this week. Correct them and the mail will come.")],
+                    choices: [DialogChoice(title: tr("See history")) { [weak self] in self?.open(.inbox) }, DialogChoice(title: tr("Close")) {}])
             } else {
                 open(.inbox)
             }
         case .robot:
             if let session { talk(to: session) } else {
-                say(nil, ["Un bureau libre.", "Lance un agent (Claude Code, Codex, Cursor, Pi…) et un robot viendra s'installer ici."])
+                say(nil, [tr("A free desk."), tr("Start an agent (Claude Code, Codex, Cursor, Pi…) and a robot will settle here.")])
             }
         case .coffee:
             let today = usage?.today.total ?? 0
-            say(nil, ["La machine crache un expresso brûlant.", "Pendant ce temps, tes robots ont avalé \(formatTokens(today)) tokens aujourd'hui."])
+            say(nil, [tr("The machine spits out a scalding espresso."), tr("Meanwhile, your robots swallowed %@ tokens today.", formatTokens(today))])
         case .water:
-            say(nil, ["Glou glou.", "Les robots ne boivent pas d'eau. Ils préfèrent le contexte frais."])
+            say(nil, [tr("Glug glug."), tr("Robots don't drink water. They prefer fresh context.")])
         case .sofa:
-            say(nil, ["Tu t'affales dans le canapé.", working.isEmpty ? "Personne ne bosse. Profite." : "\(working.count) robot\(working.count > 1 ? "s" : "") bosse\(working.count > 1 ? "nt" : "") pour toi. Profite."])
+            let crew = working.isEmpty ? tr("Nobody is working. Enjoy.")
+                : working.count == 1 ? tr("1 robot is working for you. Enjoy.") : tr("%d robots are working for you. Enjoy.", working.count)
+            say(nil, [tr("You flop onto the sofa."), crew])
         case .servers:
             let installed = monitor.installedHarnesses().map(\.displayName).joined(separator: ", ")
-            say(nil, ["Les baies ronronnent.", "Harnais détectés sur ce Mac : \(installed.isEmpty ? "aucun" : installed).",
-                      "Tout reste ici : tes conversations sont lues en local et rangées dans une base SQLite sur ton Mac."])
+            say(nil, [tr("The racks are purring."), tr("Harnesses found on this Mac: %@.", installed.isEmpty ? tr("none") : installed),
+                      tr("Everything stays here: your conversations are read locally and kept in a SQLite database on your Mac.")])
         case .window:
-            say(nil, ["Il fait beau dehors.", "Tes robots ne voient jamais le soleil. C'est pour ça qu'ils bossent bien."])
+            say(nil, [tr("It's sunny outside."), tr("Your robots never see the sun. That's why they work so well.")])
         case .plant:
-            say(nil, ["Une plante verte.", "Elle a l'air d'aller mieux que ta fenêtre de contexte."])
+            say(nil, [tr("A green plant."), tr("It looks healthier than your context window.")])
         }
     }
 
     func talk(to session: AgentSession) {
         var pages: [String] = []
-        let project = session.projectName.isEmpty ? "un projet" : session.projectName
+        let project = session.projectName.isEmpty ? tr("a project") : session.projectName
         switch session.status {
         case .working:
-            pages.append("Je bosse sur « \(session.title) » dans \(project).")
-            if let prompt = session.lastPrompt { pages.append("Ton dernier ordre : « \(prompt.singleLineTruncated(180)) »") }
+            pages.append(tr("I'm working on “%@” in %@.", session.title, project))
+            if let prompt = session.lastPrompt { pages.append(tr("Your last order: “%@”", prompt.singleLineTruncated(180))) }
         case .needsApproval:
-            pages.append("Boss ! J'ai besoin de ton feu vert dans \(project).")
-            if let pending = session.pendingAction { pages.append("Je veux lancer : \(pending.singleLineTruncated(180))") }
-            pages.append("Valide-moi dans \(session.harness.displayName) et je repars.")
+            pages.append(tr("Boss! I need your approval in %@.", project))
+            if let pending = session.pendingAction { pages.append(tr("I want to run: %@", pending.singleLineTruncated(180))) }
+            pages.append(tr("Approve me in %@ and I'll get back to it.", session.harness.displayName))
         case .finished:
-            pages.append("J'ai fini « \(session.title) » dans \(project).")
-            if let reply = session.lastReply { pages.append("Mon dernier mot : « \(reply.singleLineTruncated(200)) »") }
+            pages.append(tr("I finished “%@” in %@.", session.title, project))
+            if let reply = session.lastReply { pages.append(tr("My last words: “%@”", reply.singleLineTruncated(200))) }
         }
         var choices: [DialogChoice] = [
-            DialogChoice(title: "Lire le journal") { [weak self] in self?.open(.robot(session.id)) },
-            DialogChoice(title: "Aller à la session") { [weak self] in self?.focus(session) },
+            DialogChoice(title: tr("Read the logbook")) { [weak self] in self?.open(.robot(session.id)) },
+            DialogChoice(title: tr("Go to session")) { [weak self] in self?.focus(session) },
         ]
         if !session.cwd.isEmpty {
-            choices.append(DialogChoice(title: "Ouvrir le dossier") { NSWorkspace.shared.open(URL(fileURLWithPath: session.cwd)) })
+            choices.append(DialogChoice(title: tr("Open folder")) { NSWorkspace.shared.open(URL(fileURLWithPath: session.cwd)) })
         }
-        choices.append(DialogChoice(title: "Rien, continue") {})
+        choices.append(DialogChoice(title: tr("Crack the whip")) { [weak self] in
+            self?.scene.endConversation()
+            self?.scene.crackWhip()
+        })
+        choices.append(DialogChoice(title: tr("Nothing, carry on")) {})
         say("\(RobotName.of(session))", pages, portrait: Theme.robotImage(for: session.harness), choices: choices)
     }
 
     func focus(_ session: AgentSession) {
         if SessionLauncher.focus(session) {
-            showToast("Session ouverte")
+            showToast(tr("Session opened"))
         } else {
             let command = SessionLauncher.resumeCommand(session)
             NSPasteboard.general.clearContents()
             NSPasteboard.general.setString(command, forType: .string)
-            showToast("Commande copiée : \(command)")
+            showToast(tr("Command copied: %@", command))
         }
     }
 
@@ -543,6 +595,8 @@ enum RobotName {
         switch session.harness {
         case .claude: prefix = "CLAUDE"
         case .codex: prefix = "CODEX"
+        case .gemini: prefix = "GEMINI"
+        case .copilot: prefix = "COPILOT"
         case .cursor: prefix = "CURSOR"
         case .pi: prefix = "PI"
         case .omp: prefix = "OMP"

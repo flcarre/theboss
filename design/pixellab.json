@@ -1,8 +1,8 @@
 {
   "characters": {
     "boss": {
-      "id": "17cea33e-c824-42db-aed1-ddde2d8ccbdd",
-      "base": "https://backblaze.pixellab.ai/file/pixellab-characters/708dc55d-67c0-4b7b-b3bf-877453aece21/17cea33e-c824-42db-aed1-ddde2d8ccbdd",
+      "id": "58442906-e053-4aec-a1cc-e2226231f7f0",
+      "base": "https://backblaze.pixellab.ai/file/pixellab-characters/708dc55d-67c0-4b7b-b3bf-877453aece21/58442906-e053-4aec-a1cc-e2226231f7f0",
       "rotations": [
         "south",
         "north",
@@ -12,22 +12,39 @@
       "animations": {
         "walk": {
           "east": {
-            "id": "4c7c9323-eb28-424a-8b74-1a6a2ab68a83",
-            "frames": 8
-          },
-          "south": {
-            "id": "e3e5ba1e-4482-45dd-9c3b-032578d29f5a",
+            "id": "7f7db7d5-6348-4adf-8e43-cd0478492b8c",
             "frames": 8
           },
           "north": {
-            "id": "d56b0d57-325f-4e91-8603-2b1889783088",
+            "id": "de3691af-d16f-415d-b558-7a942dfa4d34",
+            "frames": 8
+          },
+          "south": {
+            "id": "8996fe08-2e24-4189-a9af-5f261b537019",
             "frames": 8
           },
           "west": {
-            "id": "47e714c7-671d-4f3b-87e2-6ab4838c450e",
+            "id": "f425d3e4-e17b-46a0-8573-83bad98a2017",
+            "frames": 8
+          }
+        },
+        "whip": {
+          "south": {
+            "id": "f6a5dae4-664c-4fef-9ec4-90e21b898e43",
+            "frames": 8
+          },
+          "west": {
+            "id": "b5a49169-6afb-45cf-bd63-63f07a4e34a1",
+            "frames": 8
+          },
+          "north": {
+            "id": "24825005-60e9-412b-907f-672b93d3bf38",
             "frames": 8
           }
         }
+      },
+      "mirrored": {
+        "whip/east": "whip/west"
       }
     },
     "robot_claude": {
@@ -101,6 +118,54 @@
           }
         }
       }
+    },
+    "robot_gemini": {
+      "id": "c7dbf582-cd3f-445a-8ebe-1e6826caeb60",
+      "base": "https://backblaze.pixellab.ai/file/pixellab-characters/708dc55d-67c0-4b7b-b3bf-877453aece21/c7dbf582-cd3f-445a-8ebe-1e6826caeb60",
+      "rotations": [
+        "south",
+        "north",
+        "east",
+        "west"
+      ],
+      "animations": {
+        "typing": {
+          "south": {
+            "id": "01e484fc-884a-48fc-a053-5ffe9c954930",
+            "frames": 9
+          }
+        },
+        "alert": {
+          "south": {
+            "id": "b9ebc0cd-eb27-4e16-b528-26d88a748905",
+            "frames": 9
+          }
+        }
+      }
+    },
+    "robot_copilot": {
+      "id": "4d44d633-28ad-4928-a882-8ec9ef056242",
+      "base": "https://backblaze.pixellab.ai/file/pixellab-characters/708dc55d-67c0-4b7b-b3bf-877453aece21/4d44d633-28ad-4928-a882-8ec9ef056242",
+      "rotations": [
+        "south",
+        "north",
+        "east",
+        "west"
+      ],
+      "animations": {
+        "typing": {
+          "south": {
+            "id": "4b7fa965-9977-4a1b-b2b0-ddefba4fb534",
+            "frames": 9
+          }
+        },
+        "alert": {
+          "south": {
+            "id": "f219650e-863f-45df-a22d-fc865facc1e3",
+            "frames": 9
+          }
+        }
+      }
     }
   },
   "objects": {
@@ -115,6 +180,19 @@
     "water_cooler": "https://backblaze.pixellab.ai/file/pixellab-characters/objects/708dc55d-67c0-4b7b-b3bf-877453aece21/9d73ce0f-e58b-45c4-b2fa-de2792c3a605/rotations/unknown.png",
     "window_wall": "https://backblaze.pixellab.ai/file/pixellab-characters/objects/708dc55d-67c0-4b7b-b3bf-877453aece21/7550e42c-d7a1-4d5f-b1d2-6ce8fc992908/rotations/unknown.png",
     "sofa": "https://backblaze.pixellab.ai/file/pixellab-characters/objects/708dc55d-67c0-4b7b-b3bf-877453aece21/0cee5baf-a88f-4485-8390-4d77d39913fc/rotations/unknown.png",
-    "archive_cabinet": "https://backblaze.pixellab.ai/file/pixellab-characters/objects/708dc55d-67c0-4b7b-b3bf-877453aece21/d6579926-6614-43fd-b555-41b213483d59/rotations/unknown.png"
+    "archive_cabinet": "https://backblaze.pixellab.ai/file/pixellab-characters/objects/708dc55d-67c0-4b7b-b3bf-877453aece21/d6579926-6614-43fd-b555-41b213483d59/rotations/unknown.png",
+    "plant": "https://backblaze.pixellab.ai/file/pixellab-characters/objects/708dc55d-67c0-4b7b-b3bf-877453aece21/f22d4564-b0c7-4c05-9eb9-6f2aa091dafc/rotations/unknown.png",
+    "rug": "https://backblaze.pixellab.ai/file/pixellab-characters/objects/708dc55d-67c0-4b7b-b3bf-877453aece21/39013e93-89cb-4fa8-b072-33cd4676004f/rotations/unknown.png",
+    "door": "https://backblaze.pixellab.ai/file/pixellab-characters/objects/708dc55d-67c0-4b7b-b3bf-877453aece21/a68fd52e-641c-42e8-8513-623f2054fa28/rotations/unknown.png"
+  },
+  "icons": {
+    "agents": "https://backblaze.pixellab.ai/file/pixellab-characters/objects/708dc55d-67c0-4b7b-b3bf-877453aece21/0f6daa57-1d87-4576-bb9c-4368a3523173/rotations/unknown.png",
+    "mail": "https://backblaze.pixellab.ai/file/pixellab-characters/objects/708dc55d-67c0-4b7b-b3bf-877453aece21/3f984c88-7a5c-438a-8e87-ab356cd5dbdf/rotations/unknown.png",
+    "usage": "https://backblaze.pixellab.ai/file/pixellab-characters/objects/708dc55d-67c0-4b7b-b3bf-877453aece21/e27ee61d-7cc4-4361-8a43-f3323af5b41e/rotations/unknown.png",
+    "rules": "https://backblaze.pixellab.ai/file/pixellab-characters/objects/708dc55d-67c0-4b7b-b3bf-877453aece21/9d3fbd62-0238-4728-91f7-e3efc705f976/rotations/unknown.png",
+    "stats": "https://backblaze.pixellab.ai/file/pixellab-characters/objects/708dc55d-67c0-4b7b-b3bf-877453aece21/41daa2f2-1c4d-42d9-b1ad-19bb459341f7/rotations/unknown.png",
+    "settings": "https://backblaze.pixellab.ai/file/pixellab-characters/objects/708dc55d-67c0-4b7b-b3bf-877453aece21/78c47708-ab87-49ab-99ed-91a3d1f2db42/rotations/unknown.png",
+    "domain": "https://backblaze.pixellab.ai/file/pixellab-characters/objects/708dc55d-67c0-4b7b-b3bf-877453aece21/17ebfbfa-1c7e-430c-b650-d4ac26efde9e/rotations/unknown.png",
+    "logbook": "https://backblaze.pixellab.ai/file/pixellab-characters/objects/708dc55d-67c0-4b7b-b3bf-877453aece21/57632fd8-69ee-4cc8-887c-10ff8a8a7a6d/rotations/unknown.png"
   }
 }

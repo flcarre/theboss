@@ -3,6 +3,8 @@ import pathlib
 import sys
 import urllib.request
 
+from PIL import Image, ImageOps
+
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 MANIFEST = ROOT / "design" / "pixellab.json"
 OUT = ROOT / "Sources" / "TheBoss" / "Assets"
@@ -29,8 +31,18 @@ def main():
                 for index in range(spec["frames"]):
                     url = f"{base}/animations/{spec['id']}/{direction}/{index}.png"
                     fetch(url, OUT / "characters" / name / animation / direction / f"{index}.png")
+        for target, source in character.get("mirrored", {}).items():
+            source_dir = OUT / "characters" / name / source
+            target_dir = OUT / "characters" / name / target
+            target_dir.mkdir(parents=True, exist_ok=True)
+            for frame in sorted(source_dir.glob("*.png")):
+                destination = target_dir / frame.name
+                if not destination.exists() or "--force" in sys.argv:
+                    ImageOps.mirror(Image.open(frame)).save(destination)
     for name, url in manifest.get("objects", {}).items():
         fetch(url, OUT / "objects" / f"{name}.png")
+    for name, url in manifest.get("icons", {}).items():
+        fetch(url, OUT / "icons" / f"{name}.png")
 
 
 main()

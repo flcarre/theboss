@@ -7,6 +7,8 @@ enum SessionLauncher {
         switch session.harness {
         case .claude: return cd + "claude --resume \(session.sessionId)"
         case .codex: return cd + "codex resume \(session.sessionId)"
+        case .gemini: return cd + "gemini --resume \(session.sessionId)"
+        case .copilot: return cd + "copilot --resume \(session.sessionId)"
         case .pi: return cd + "pi --continue"
         case .omp: return cd + "omp --continue"
         case .cursor: return cd + "cursor-agent resume \(session.sessionId)"
@@ -21,6 +23,7 @@ enum SessionLauncher {
         switch session.harness {
         case .codex: names = ["Codex"]
         case .cursor: names = ["Cursor"]
+        case .copilot: names = ["Visual Studio Code", "Code"]
         default: names = []
         }
         if let app = NSWorkspace.shared.runningApplications.first(where: { app in

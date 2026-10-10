@@ -57,7 +57,7 @@ struct BossCoreTests {
 
     @Test func appendsLearnedRulesUnderOneSection() {
         let first = SuggestionEngine.appending(rule: "Toujours lancer les tests.", to: "# Projet\n\nIntro.\n")
-        #expect(first == "# Projet\n\nIntro.\n\n## Règles apprises\n\n- Toujours lancer les tests.\n")
+        #expect(first == "# Projet\n\nIntro.\n\n## Learned rules\n\n- Toujours lancer les tests.\n")
         let second = SuggestionEngine.appending(rule: "Jamais de console.log.", to: first)
         #expect(second.components(separatedBy: SuggestionEngine.learnedSection).count == 2)
         #expect(second.hasSuffix("- Toujours lancer les tests.\n- Jamais de console.log.\n"))
@@ -142,7 +142,7 @@ struct BossCoreTests {
         #expect(sessions.first?.tokens.total == 110)
         let limits = try #require(source.latestRateLimits())
         #expect(limits.plan == "plus")
-        #expect(limits.windows.map(\.label) == ["5 h", "Semaine"])
+        #expect(limits.windows.map(\.label) == ["5 h", "Week"])
         #expect(limits.windows.first?.usedPercent == 42)
     }
 
@@ -169,9 +169,9 @@ struct BossCoreTests {
         try write("@docs/missing.md\n# Me\n", to: home.appendingPathComponent(".claude/CLAUDE.md"))
         let session = AgentSession(harness: .claude, sessionId: "s", title: "t", cwd: project.path, status: .finished, updatedAt: Date())
         let fixes = SuggestionEngine().setupFixes(sessions: [session])
-        let importFix = try #require(fixes.first { $0.title == "Faire lire AGENTS.md à Claude Code" })
+        let importFix = try #require(fixes.first { $0.title == "Make Claude Code read AGENTS.md" })
         #expect(importFix.proposedContent == "@AGENTS.md\n")
-        let broken = try #require(fixes.first { $0.title.contains("import cassé") })
+        let broken = try #require(fixes.first { $0.title == "Remove a broken import" })
         #expect(broken.proposedContent == "# Me\n")
         try broken.apply()
         #expect(try String(contentsOf: home.appendingPathComponent(".claude/CLAUDE.md"), encoding: .utf8) == "# Me\n")
@@ -216,7 +216,7 @@ struct BossCoreTests {
     @Test func parsesClaudeUsageWindows() {
         let data = Data(#"{"five_hour":{"utilization":12.5,"resets_at":"2026-10-10T08:00:00Z"},"seven_day":{"utilization":40,"resets_at":null},"extra_usage":{"is_enabled":false}}"#.utf8)
         let windows = UsageService.parseClaudeWindows(data)
-        #expect(windows.map(\.label) == ["5 h", "Semaine"])
+        #expect(windows.map(\.label) == ["5 h", "Week"])
         #expect(windows.first?.usedPercent == 12.5)
         #expect(windows.first?.resetsAt != nil)
     }
@@ -253,7 +253,7 @@ struct BossCoreTests {
         #expect(model.activity.map(\.text) == ["Checkout refactor"])
         #expect(model.agents[.codex] == 1)
         #expect(model.conflicts.count == 1)
-        #expect(model.markdown.contains("## Intention\n\nSell socks."))
+        #expect(model.markdown.contains("## Intent\n\nSell socks."))
         #expect(DomainModelBuilder.projects(from: [session]) == [project.path])
     }
 
@@ -326,5 +326,98 @@ struct BossCoreTests {
         let valid = "h." + Data(#"{"sub":"auth0|u1","exp":4102444800}"#.utf8).base64EncodedString().replacingOccurrences(of: "=", with: "") + ".s"
         #expect(!CursorAuth.isUsable(expired))
         #expect(CursorAuth.isUsable(valid))
+    }
+
+    @Test func translatesToFrenchOnDemand() {
+        defer { Localizer.language = .english }
+        #expect(AgentStatus.needsApproval.label == "Needs your approval")
+        Localizer.language = .french
+        #expect(AgentStatus.needsApproval.label == "Attend ton feu vert")
+        #expect(tr("Remove %d broken imports", 3) == "Retirer 3 imports cassés")
+        #expect(SuggestionEngine.appending(rule: "Règle.", to: "## Learned rules\n\n- A.\n") == "## Learned rules\n\n- A.\n- Règle.\n")
+    }
+
+    @Test func everyFrenchTranslationKeepsItsPlaceholders() {
+        for (english, french) in FrenchStrings.table {
+            let placeholders = { (text: String) in text.components(separatedBy: "%").dropFirst().compactMap(\.first).filter { "@d".contains($0) } }
+            #expect(placeholders(english) == placeholders(french), "\(english)")
+        }
+    }
+
+    @Test func readsGeminiJsonlSessions() throws {
+        let home = try makeHome()
+        let project = home.appendingPathComponent(".gemini/tmp/shop-api")
+        try write("/work/shop-api\n", to: project.appendingPathComponent(".project_root"))
+        let now = ISO8601DateFormatter().string(from: Date())
+        let old = ISO8601DateFormatter().string(from: Date().addingTimeInterval(-3600))
+        let lines = [
+            jsonLine(["sessionId": "gem-1", "projectHash": "abc", "startTime": old, "lastUpdated": old, "kind": "main"]),
+            jsonLine(["id": "u1", "timestamp": old, "type": "user", "content": [["text": "Ajoute un cache Redis"]]]),
+            jsonLine(["id": "g1", "timestamp": old, "type": "gemini", "content": "", "model": "gemini-3-pro"]),
+            jsonLine(["id": "g1", "timestamp": old, "type": "gemini", "content": "", "model": "gemini-3-pro",
+                      "toolCalls": [["id": "t1", "name": "run_shell_command", "args": [:], "status": "success", "timestamp": old]],
+                      "tokens": ["input": 100, "output": 10, "cached": 40, "total": 110]]),
+            jsonLine(["id": "u2", "timestamp": old, "type": "user", "content": [["functionResponse": ["name": "run_shell_command"]]]]),
+            jsonLine(["id": "g2", "timestamp": now, "type": "gemini", "content": "C'est fait.", "model": "gemini-3-pro",
+                      "tokens": ["input": 200, "output": 20, "cached": 0, "total": 220]]),
+            jsonLine(["$set": ["lastUpdated": now, "summary": "Cache Redis"]]),
+            jsonLine(["id": "u3", "timestamp": now, "type": "user", "content": [["text": "Non, jamais de TTL infini"]]]),
+            jsonLine(["$rewindTo": "u3"]),
+        ]
+        try write(lines.joined(separator: "\n") + "\n", to: project.appendingPathComponent("chats/session-2026-10-10T08-00-gem1abcd.jsonl"))
+        let source = GeminiSource()
+        let sessions = source.sessions()
+        let session = try #require(sessions.first)
+        #expect(session.harness == .gemini)
+        #expect(session.cwd == "/work/shop-api")
+        #expect(session.title == "Cache Redis")
+        #expect(session.promptCount == 1)
+        #expect(session.lastReply == "C'est fait.")
+        #expect(session.tokens.total == 330)
+        #expect(session.model == "gemini-3-pro")
+        #expect(source.messages(path: try #require(session.transcriptPath)).map(\.role) == [.user, .assistant])
+    }
+
+    @Test func readsCopilotEventsAndPendingPermissions() throws {
+        let home = try makeHome()
+        let dir = home.appendingPathComponent(".copilot/session-state/cop-1")
+        try write("id: cop-1\ncwd: /work/web\nsummary: \"Fix the login form\"\n", to: dir.appendingPathComponent("workspace.yaml"))
+        try write("\(getpid())", to: dir.appendingPathComponent("inuse.\(getpid()).lock"))
+        let now = ISO8601DateFormatter().string(from: Date())
+        let lines = [
+            jsonLine(["id": "e1", "timestamp": now, "type": "session.start", "data": ["sessionId": "cop-1", "selectedModel": "gpt-5", "context": ["cwd": "/work/web"]]]),
+            jsonLine(["id": "e2", "timestamp": now, "type": "user.message", "data": ["content": "Corrige le formulaire de login"]]),
+            jsonLine(["id": "e3", "timestamp": now, "type": "assistant.turn_start", "data": ["turnId": "1"]]),
+            jsonLine(["id": "e4", "timestamp": now, "type": "assistant.message", "data": ["messageId": "m1", "content": "Je regarde.",
+                      "toolRequests": [["toolCallId": "c1", "name": "bash"]]]]),
+            jsonLine(["id": "e5", "timestamp": now, "type": "permission.requested", "data": ["requestId": "p1",
+                      "permissionRequest": ["kind": "shell", "fullCommandText": "npm test", "intention": "Run tests"]]]),
+        ]
+        let events = dir.appendingPathComponent("events.jsonl")
+        try write(lines.joined(separator: "\n") + "\n", to: events)
+        let source = CopilotSource()
+        var session = try #require(source.sessions().first)
+        #expect(session.harness == .copilot)
+        #expect(session.status == .needsApproval)
+        #expect(session.pendingAction == "shell · npm test")
+        #expect(session.title == "Fix the login form")
+        #expect(session.cwd == "/work/web")
+        #expect(session.model == "gpt-5")
+
+        let more = [
+            jsonLine(["id": "e6", "timestamp": now, "type": "permission.completed", "data": ["requestId": "p1", "result": ["kind": "approved"]]]),
+            jsonLine(["id": "e7", "timestamp": now, "type": "assistant.message", "data": ["messageId": "m2", "content": "Tests verts."]]),
+            jsonLine(["id": "e8", "timestamp": now, "type": "assistant.turn_end", "data": ["turnId": "1"]]),
+            jsonLine(["id": "e9", "timestamp": now, "type": "session.shutdown", "data": ["shutdownType": "routine",
+                      "modelMetrics": ["gpt-5": ["usage": ["inputTokens": 1000, "outputTokens": 50, "cacheReadTokens": 400, "cacheWriteTokens": 0]]]]]),
+        ]
+        let handle = try FileHandle(forWritingTo: events)
+        try handle.seekToEnd()
+        try handle.write(contentsOf: Data((more.joined(separator: "\n") + "\n").utf8))
+        try handle.close()
+        session = try #require(source.sessions().first)
+        #expect(session.status == .finished)
+        #expect(session.lastReply == "Tests verts.")
+        #expect(session.tokens.total == 1050)
     }
 }

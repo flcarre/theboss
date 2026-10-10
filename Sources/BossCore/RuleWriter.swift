@@ -15,18 +15,18 @@ public enum RuleWriter {
 
     static func prompt(for suggestion: Suggestion) -> String {
         let quotes = suggestion.evidence.prefix(5).map { evidence -> String in
-            var block = "- Le développeur a écrit : « \(evidence.quote) »"
-            if let context = evidence.context { block += "\n  juste après que l'agent a dit : « \(context) »" }
+            var block = "- The developer wrote: \"\(evidence.quote)\""
+            if let context = evidence.context { block += "\n  right after the agent said: \"\(context)\"" }
             return block
         }.joined(separator: "\n")
         return """
-        Un développeur a dû corriger son agent de code. Voici ses messages :
+        A developer had to correct their coding agent. Here are their messages:
         \(quotes)
 
-        Écris UNE règle générale à ajouter au fichier \(URL(fileURLWithPath: suggestion.filePath).lastPathComponent) du projet pour que l'agent ne refasse plus cette erreur.
-        Contraintes : une seule phrase impérative, 25 mots au plus, dans la langue du développeur, sans citer de fichier, de ticket ni de date.
-        Si aucune règle générale ne se dégage, réponds exactement NONE.
-        Réponds uniquement par la règle, sans guillemets ni puce.
+        Write ONE general rule to add to the project's \(URL(fileURLWithPath: suggestion.filePath).lastPathComponent) file so the agent never repeats this mistake.
+        Constraints: a single imperative sentence, 25 words at most, in the developer's language, without naming a file, ticket or date.
+        If no general rule emerges, answer exactly NONE.
+        Answer with the rule only, no quotes or bullet.
         """
     }
 
@@ -34,7 +34,7 @@ public enum RuleWriter {
         guard let executable = claudeExecutable() else { return false }
         let process = Process()
         process.executableURL = URL(fileURLWithPath: executable)
-        process.arguments = ["-p", "Réponds juste ok.", "--model", "haiku"]
+        process.arguments = ["-p", "Reply with just ok.", "--model", "haiku"]
         process.currentDirectoryURL = workingDirectory
         process.standardOutput = Pipe()
         process.standardError = Pipe()
@@ -52,7 +52,7 @@ public enum RuleWriter {
 
     public static func refine(_ suggestion: Suggestion, timeout: TimeInterval = 90) async -> Result<String?, Error> {
         guard let executable = claudeExecutable() else {
-            return .failure(NSError(domain: "TheBoss", code: 1, userInfo: [NSLocalizedDescriptionKey: "Claude Code introuvable sur ce Mac."]))
+            return .failure(NSError(domain: "TheBoss", code: 1, userInfo: [NSLocalizedDescriptionKey: tr("Claude Code was not found on this Mac.")]))
         }
         let process = Process()
         process.executableURL = URL(fileURLWithPath: executable)
@@ -73,12 +73,12 @@ public enum RuleWriter {
         }
         if process.isRunning {
             process.terminate()
-            return .failure(NSError(domain: "TheBoss", code: 2, userInfo: [NSLocalizedDescriptionKey: "Claude n'a pas répondu à temps."]))
+            return .failure(NSError(domain: "TheBoss", code: 2, userInfo: [NSLocalizedDescriptionKey: tr("Claude did not answer in time.")]))
         }
         let text = String(decoding: output.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
         if process.terminationStatus != 0 || looksLikeError(text) {
             let detail = text.trimmingCharacters(in: .whitespacesAndNewlines).split(separator: "\n").first.map(String.init) ?? "erreur inconnue"
-            return .failure(NSError(domain: "TheBoss", code: 3, userInfo: [NSLocalizedDescriptionKey: "Claude Code a échoué : \(detail)"]))
+            return .failure(NSError(domain: "TheBoss", code: 3, userInfo: [NSLocalizedDescriptionKey: tr("Claude Code failed: %@", detail)]))
         }
         return .success(clean(text))
     }

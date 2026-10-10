@@ -11,24 +11,24 @@ func depth(forBaseY y: CGFloat) -> CGFloat { 10_000 - y }
 
 final class PlayerNode: SKNode {
     private let sprite = SKSpriteNode()
-    private let shadow = SKSpriteNode(texture: PixelArt.shadow(width: 44, height: 12))
     private var walkFrames: [Facing: [SKTexture]] = [:]
+    private var idlePadding: [Facing: CGFloat] = [:]
+    private static let feetY: CGFloat = 10
     private var idle: [Facing: SKTexture] = [:]
     private(set) var facing: Facing = .south
     private(set) var isMoving = false
+    private var walkingFacing: Facing?
     var tile = Tile(c: 0, r: 0)
 
     override init() {
         super.init()
         for facing in Facing.allCases {
-            idle[facing] = Assets.texture("characters/boss/rotations/\(facing.rawValue).png")
+            let idlePath = "characters/boss/rotations/\(facing.rawValue).png"
+            idle[facing] = Assets.texture(idlePath)
+            idlePadding[facing] = Assets.bottomPadding(idlePath)
             walkFrames[facing] = Assets.frames("characters/boss/walk/\(facing.rawValue)")
         }
-        shadow.position = CGPoint(x: 0, y: 6)
-        shadow.zPosition = -1
-        addChild(shadow)
         sprite.anchorPoint = CGPoint(x: 0.5, y: 0)
-        sprite.position = CGPoint(x: 0, y: -4)
         addChild(sprite)
         face(.south)
     }
@@ -40,7 +40,13 @@ final class PlayerNode: SKNode {
         if !isMoving, let texture = idle[facing] {
             sprite.texture = texture
             sprite.size = texture.size()
+            sprite.position.y = Self.feetY - (idlePadding[facing] ?? 0)
         }
+    }
+
+    private func feetOffset(canvasHeight: CGFloat) -> CGFloat {
+        let restHeight = idle[facing]?.size().height ?? canvasHeight
+        return Self.feetY - (idlePadding[facing] ?? 0) - (canvasHeight - restHeight) / 2
     }
 
     func place(at tile: Tile) {
@@ -53,7 +59,9 @@ final class PlayerNode: SKNode {
         isMoving = true
         self.tile = tile
         let target = TheBoss.position(of: tile)
-        if let frames = walkFrames[facing], !frames.isEmpty, sprite.action(forKey: "walk") == nil {
+        if let frames = walkFrames[facing], !frames.isEmpty, sprite.action(forKey: "walk") == nil || walkingFacing != facing {
+            walkingFacing = facing
+            sprite.position.y = feetOffset(canvasHeight: frames[0].size().height)
             sprite.run(.repeatForever(.animate(with: frames, timePerFrame: 0.075, resize: true, restore: false)), withKey: "walk")
         }
         let move = SKAction.customAction(withDuration: duration) { [weak self] node, elapsed in
@@ -75,6 +83,24 @@ final class PlayerNode: SKNode {
         }]))
     }
 
+    func crackWhip(completion: @escaping () -> Void) {
+        let frames = Assets.frames("characters/boss/whip/\(facing.rawValue)")
+        sprite.removeAction(forKey: "walk")
+        guard frames.count > 1 else {
+            run(.sequence([.wait(forDuration: 0.15), .run(completion)]))
+            return
+        }
+        let paddings = (0..<frames.count).map { Assets.bottomPadding("characters/boss/whip/\(facing.rawValue)/\($0).png") }.sorted()
+        sprite.position.y = Self.feetY - paddings[paddings.count / 2]
+        sprite.run(.sequence([
+            .animate(with: frames, timePerFrame: 0.055, resize: true, restore: false),
+            .run { [weak self] in
+                self?.face(self?.facing ?? .south)
+            },
+        ]))
+        run(.sequence([.wait(forDuration: 0.055 * Double(frames.count) * 0.6), .run(completion)]))
+    }
+
     func stopWalking() {
         sprite.removeAction(forKey: "walk")
         face(facing)
@@ -87,6 +113,8 @@ enum RobotLook {
         case .claude, .pi: "robot_claude"
         case .codex, .omp: "robot_codex"
         case .cursor: "robot_cursor"
+        case .gemini: "robot_gemini"
+        case .copilot: "robot_copilot"
         }
     }
 
@@ -115,7 +143,7 @@ final class RobotNode: SKNode {
     private let emote = SKSpriteNode()
     private let light = SKSpriteNode()
     private let glow = SKSpriteNode(texture: PixelArt.glow(width: 48, height: 22, color: 0x7FD8FF))
-    private let nameplate = SKLabelNode()
+    private let plaque = DeskPlaque()
     private var renderedStatus: AgentStatus?
 
     init(session: AgentSession, slot: DeskSlot) {
@@ -145,13 +173,9 @@ final class RobotNode: SKNode {
         light.position = CGPoint(x: -34, y: 100)
         light.zPosition = 51
         addChild(light)
-        nameplate.fontName = Theme.pixelFontName
-        nameplate.fontSize = 13
-        nameplate.fontColor = NSColor(srgbRed: 1, green: 0.965, blue: 0.925, alpha: 1)
-        nameplate.position = CGPoint(x: 0, y: 124)
-        nameplate.zPosition = 52
-        nameplate.alpha = 0
-        addChild(nameplate)
+        plaque.position = CGPoint(x: 0, y: -2)
+        plaque.zPosition = 60
+        addChild(plaque)
         position = CGPoint(x: CGFloat(slot.centerX) * tileSize, y: CGFloat(slot.deskTile.r) * tileSize + 10 + RobotNode.standBehindDesk)
         zPosition = depth(forBaseY: CGFloat(slot.deskTile.r) * tileSize + 10) - 1
         update(session)
@@ -161,7 +185,8 @@ final class RobotNode: SKNode {
 
     func update(_ session: AgentSession) {
         self.session = session
-        nameplate.text = session.projectName.isEmpty ? session.harness.displayName : session.projectName
+        plaque.show(project: session.projectName.isEmpty ? session.harness.displayName : session.projectName,
+                    task: session.title, status: session.status)
         guard renderedStatus != session.status else { return }
         renderedStatus = session.status
         let folder = RobotLook.folder(for: session.harness)
@@ -204,9 +229,9 @@ final class RobotNode: SKNode {
     }
 
     private func show(emote name: String, bounce: Bool) {
-        let texture = Assets.texture("tbfc/emotes/emotes_bulles_\(name).png")
+        let texture = name == "exclamation" ? ProceduralArt.exclamation : ProceduralArt.sleeping
         emote.texture = texture
-        emote.size = CGSize(width: texture.size().width * 0.5, height: texture.size().height * 0.5)
+        emote.size = CGSize(width: texture.size().width * 2, height: texture.size().height * 2)
         emote.isHidden = false
         emote.position = CGPoint(x: 40, y: 96)
         if bounce {
@@ -218,7 +243,31 @@ final class RobotNode: SKNode {
     }
 
     func setHighlighted(_ highlighted: Bool) {
-        nameplate.run(.fadeAlpha(to: highlighted ? 1 : 0, duration: 0.12))
+        plaque.setHighlighted(highlighted)
+    }
+
+    func whipped(boost: Bool) {
+        sprite.run(.sequence([
+            .moveBy(x: -5, y: 0, duration: 0.03), .moveBy(x: 10, y: 0, duration: 0.05),
+            .moveBy(x: -9, y: 0, duration: 0.05), .moveBy(x: 4, y: 0, duration: 0.04),
+        ]))
+        sprite.run(.sequence([.colorize(with: .white, colorBlendFactor: 0.7, duration: 0.03), .colorize(withColorBlendFactor: RobotLook.tint(for: session.harness) == nil ? 0 : 0.45, duration: 0.2)]))
+        let sweat = SKSpriteNode(texture: ProceduralArt.sweat)
+        sweat.size = CGSize(width: sweat.size.width * 2, height: sweat.size.height * 2)
+        sweat.anchorPoint = CGPoint(x: 0.5, y: 0)
+        sweat.position = CGPoint(x: -38, y: 96)
+        sweat.zPosition = 55
+        addChild(sweat)
+        sweat.run(.sequence([.moveBy(x: 0, y: 8, duration: 0.25), .wait(forDuration: 0.9), .fadeOut(withDuration: 0.3), .removeFromParent()]))
+        guard boost, session.status == .working else { return }
+        let folder = RobotLook.folder(for: session.harness)
+        let frames = Assets.frames("characters/\(folder)/typing/south")
+        guard frames.count > 1 else { return }
+        sprite.removeAction(forKey: "typing")
+        sprite.run(.sequence([
+            .repeat(.animate(with: frames, timePerFrame: 0.04, resize: true, restore: false), count: 10),
+            .run { [weak self] in self?.renderedStatus = nil; self?.resume() },
+        ]), withKey: "frenzy")
     }
 
     func turn(toward facing: Facing) {
@@ -236,7 +285,7 @@ final class RobotNode: SKNode {
     func appear() {
         alpha = 0
         let sparkle = SKSpriteNode()
-        let frames = (1...6).map { Assets.texture("tbfc/fx/effets_1_scintillement_\($0).png") }
+        let frames = (0..<6).map { ProceduralArt.sparkle(frame: $0) }
         sparkle.position = CGPoint(x: 0, y: 60)
         sparkle.zPosition = 60
         addChild(sparkle)
@@ -245,12 +294,81 @@ final class RobotNode: SKNode {
     }
 
     func leave(completion: @escaping () -> Void) {
-        let frames = (1...6).map { Assets.texture("tbfc/fx/effets_1_fumee_\($0).png") }
+        let frames = (0..<6).map { ProceduralArt.smoke(frame: $0) }
         let puff = SKSpriteNode()
         puff.position = CGPoint(x: position.x, y: position.y + 50)
         puff.zPosition = zPosition + 1
         parent?.addChild(puff)
         puff.run(.sequence([.animate(with: frames, timePerFrame: 0.07, resize: true, restore: false), .removeFromParent()]))
         run(.sequence([.fadeOut(withDuration: 0.25), .removeFromParent(), .run(completion)]))
+    }
+}
+
+final class DeskPlaque: SKNode {
+    static let size = CGSize(width: 128, height: 32)
+    private let background = SKSpriteNode()
+    private let projectLabel = SKLabelNode()
+    private let taskLabel = SKLabelNode()
+    private var rendered: (String, String, AgentStatus)?
+
+    override init() {
+        super.init()
+        addChild(background)
+        for (label, weight, y) in [(projectLabel, NSFont.Weight.heavy, CGFloat(3)), (taskLabel, NSFont.Weight.semibold, CGFloat(-10))] {
+            label.fontName = Theme.roundedFontName(size: 10, weight: weight)
+            label.fontSize = 10
+            label.horizontalAlignmentMode = .left
+            label.verticalAlignmentMode = .baseline
+            label.position = CGPoint(x: -Self.size.width / 2 + 11, y: y)
+            label.zPosition = 1
+            addChild(label)
+        }
+        projectLabel.fontColor = NSColor(srgbRed: 0.96, green: 0.73, blue: 0.26, alpha: 1)
+        taskLabel.fontColor = NSColor(srgbRed: 1, green: 0.965, blue: 0.925, alpha: 1)
+    }
+
+    required init?(coder: NSCoder) { fatalError() }
+
+    func show(project: String, task: String, status: AgentStatus) {
+        if let rendered, rendered == (project, task, status) { return }
+        rendered = (project, task, status)
+        let texture = Self.plate(status: status)
+        background.texture = texture
+        background.size = texture.size()
+        let width = Self.size.width - 18
+        projectLabel.text = Self.fit(project.uppercased(), font: NSFont.systemFont(ofSize: 10, weight: .heavy), width: width)
+        taskLabel.text = Self.fit(task, font: NSFont.systemFont(ofSize: 10, weight: .semibold), width: width)
+    }
+
+    func setHighlighted(_ highlighted: Bool) {
+        run(.scale(to: highlighted ? 1.08 : 1, duration: 0.1))
+    }
+
+    static func fit(_ text: String, font: NSFont, width: CGFloat) -> String {
+        let attributes: [NSAttributedString.Key: Any] = [.font: font]
+        let line = text.singleLineTruncated(200)
+        if (line as NSString).size(withAttributes: attributes).width <= width { return line }
+        var count = line.count
+        while count > 1 {
+            count -= 1
+            let candidate = String(line.prefix(count)).trimmingCharacters(in: .whitespaces) + "…"
+            if (candidate as NSString).size(withAttributes: attributes).width <= width { return candidate }
+        }
+        return "…"
+    }
+
+    static func plate(status: AgentStatus) -> SKTexture {
+        ProceduralArt.cached("plate-\(status.rawValue)") {
+            let w = Int(size.width), h = Int(size.height)
+            var c = PixelCanvas(width: w, height: h)
+            c.rect(1, 0, w - 2, h, PixelArt.outline)
+            c.rect(0, 1, w, h - 2, PixelArt.outline)
+            c.rect(2, 2, w - 4, h - 4, RGBA(0x2B2547))
+            c.rect(2, 2, w - 4, 1, RGBA(0x4E4580))
+            c.rect(2, h - 3, w - 4, 1, RGBA(0x1E1A33))
+            c.rect(3, 4, 3, h - 8, RGBA(RobotLook.color(for: status)))
+            c.rect(3, 4, 3, 1, RGBA(0xFFF6EC, alpha: 160))
+            return c
+        }
     }
 }

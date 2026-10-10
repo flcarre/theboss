@@ -1,0 +1,38 @@
+{
+  "project": "The Boss — macOS game where a fox boss walks through an office and an open space full of robot coworkers",
+  "instructions_for_chatgpt": "You are the pixel artist of The Boss. Produce ONE image per message, in the order of `assets`. Apply `style` and `global_rules` to every image. Respect `size` and `background` exactly (transparent = a real transparent PNG background, no checkerboard). After each image, give its exact `file` name and wait for 'next'.",
+  "style": "Detailed 2D pixel art inspired by Nintendo DS Pokémon Diamond/Pearl/Platinum interiors, but finer. Every art pixel is drawn as an exact 4×4 block of identical screen pixels (the image is a ×4 upscale of the native art). Crisp near-black 1-art-pixel outlines, 4 to 5 flat shades per material, light from the top-left, hand-placed pixel textures (wood grain, plaster speckles). No anti-aliasing, no gradients, no blur, no glow, no noise. Front view, as seen in a DS RPG house interior.",
+  "palette_hint": ["#2A1840 outline", "#2B2547 dark trim", "#EADFC8 warm cream", "#C9832A walnut light", "#9A6420 walnut", "#6A4218 walnut dark", "#D9DEEA pale blue-grey", "#7A6FB0 lavender grey", "#F5B942 brass"],
+  "global_rules": [
+    "Exactly one asset per image, centered, nothing else in the frame.",
+    "No text, no letters, no numbers, no logos, no people, no characters.",
+    "Pixel grid must stay perfectly regular: every art pixel is a 4×4 block.",
+    "Walls must tile seamlessly left-to-right: the left and right edges must continue each other exactly."
+  ],
+  "assets": [
+    {
+      "file": "wall_office.png",
+      "size": "1024x512",
+      "native_size": "256x128",
+      "background": "opaque",
+      "target": "Sources/TheBoss/Assets/walls/wall_office.png",
+      "description": "A seamless horizontal strip of the back wall of a cozy boss office, 4 tiles wide and 2 tiles high, seen straight from the front. From top to bottom: a dark plum crown molding with a thin highlight (top 8 art px); warm cream plaster with a subtle small damask wallpaper pattern (about 76 art px); a polished walnut chair rail; dark walnut wainscoting with two raised rectangular panels per 64 art px; a dark baseboard at the very bottom (6 art px). No windows, no doors, no furniture."
+    },
+    {
+      "file": "wall_openspace.png",
+      "size": "1024x512",
+      "native_size": "256x128",
+      "background": "opaque",
+      "target": "Sources/TheBoss/Assets/walls/wall_openspace.png",
+      "description": "A seamless horizontal strip of the back wall of a modern tech open-space office, 4 tiles wide and 2 tiles high, seen straight from the front. From top to bottom: a dark slate ceiling edge with a thin highlight (top 8 art px); pale blue-grey painted plaster with very light speckles (about 70 art px); a thin white trim line; a light grey acoustic panel band with small vertical grooves every 8 art px; a white baseboard at the very bottom (6 art px). No windows, no doors, no furniture."
+    },
+    {
+      "file": "door_office.png",
+      "size": "1024x1536",
+      "native_size": "80x120",
+      "background": "transparent",
+      "target": "Sources/TheBoss/Assets/objects/door.png",
+      "description": "A closed interior office door set flush in a wall, seen straight from the front, filling the frame: a warm walnut wooden door with four raised panels, a brass lever handle on the right, a small brass plate, inside a cream painted door frame with a simple molding and a dark threshold at the bottom. It must look inviting, like a door leading to the next room in a DS RPG."
+    }
+  ]
+}

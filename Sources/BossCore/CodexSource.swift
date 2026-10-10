@@ -197,7 +197,7 @@ final class CodexSource {
                 }
                 if let limits = payload["rate_limits"] as? [String: Any], let date {
                     var windows: [RateWindow] = []
-                    for (key, label) in [("primary", "Fenêtre courte"), ("secondary", "Semaine")] {
+                    for (key, label) in [("primary", tr("Short window")), ("secondary", tr("Week"))] {
                         guard let window = limits[key] as? [String: Any],
                               let used = (window["used_percent"] as? NSNumber)?.doubleValue else { continue }
                         let minutes = window["window_minutes"] as? Int
@@ -217,8 +217,8 @@ final class CodexSource {
     }
 
     static func windowLabel(_ minutes: Int) -> String {
-        if minutes >= 7 * 24 * 60 - 1 { return "Semaine" }
-        if minutes >= 24 * 60 { return "\(minutes / (24 * 60)) jours" }
-        return "\(minutes / 60) h"
+        if minutes >= 7 * 24 * 60 - 1 { return tr("Week") }
+        if minutes >= 24 * 60 { return tr("%d days", minutes / (24 * 60)) }
+        return tr("%d h", minutes / 60)
     }
 }

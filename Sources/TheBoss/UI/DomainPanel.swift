@@ -10,43 +10,47 @@ struct DomainPanel: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            VStack(alignment: .leading, spacing: 10) {
-                SectionTitle(text: "Projets")
-                Text("Une source de vérité par projet : ce que tu veux, les conventions écrites, les décisions apprises, le travail en cours.")
-                    .font(Theme.body(12)).foregroundStyle(Theme.ink.opacity(0.65))
+            VStack(alignment: .leading, spacing: 12) {
+                Text(tr("One source of truth per project: what you want, the written conventions, the learned decisions, the work in progress."))
+                    .font(Theme.body(13)).foregroundStyle(Theme.inkSoft).fixedSize(horizontal: false, vertical: true)
                 if model.domainProjects.isEmpty {
-                    EmptyState(text: "Aucun projet : lance un agent dans un dépôt.")
+                    EmptyState(text: tr("No project yet: start an agent inside a repository."))
                 }
                 ScrollView {
-                    VStack(spacing: 6) {
+                    LazyVStack(spacing: 8) {
                         ForEach(model.domainProjects, id: \.self) { root in
-                            let count = model.sessions.filter { RulesInventory.projectRoot($0.cwd) == root }.count
-                            HStack {
-                                PixelImage(image: Assets.image("tbfc/icons/icones_ecrans_carte.png"), size: 22)
-                                Text((root as NSString).lastPathComponent).font(Theme.body(13, weight: .semibold)).foregroundStyle(Theme.ink)
-                                Spacer()
-                                Text("\(count)").font(Theme.pixel(13)).foregroundStyle(Theme.ink.opacity(0.6))
-                            }
-                            .padding(8)
-                            .background(root == selected ? Theme.crust.opacity(0.35) : Theme.paper.opacity(0.5))
-                            .overlay(Rectangle().stroke(Theme.ink, lineWidth: root == selected ? 3 : 2))
-                            .contentShape(Rectangle())
-                            .onTapGesture { select(root) }
+                            projectRow(root)
                         }
                     }
-                    .padding(2)
+                    .padding(.trailing, 6)
+                    .padding(.bottom, 6)
                 }
             }
-            .padding(18)
+            .padding(20)
             .frame(width: 300)
             Rectangle().fill(Theme.ink).frame(width: 3)
             if let domain {
                 detail(domain)
             } else {
-                EmptyState(text: "Choisis un projet.")
+                EmptyState(text: tr("Pick a project."))
             }
         }
         .onAppear { if selected == nil, let first = model.domainProjects.first { select(first) } }
+    }
+
+    func projectRow(_ root: String) -> some View {
+        let count = model.sessions.filter { RulesInventory.projectRoot($0.cwd) == root }.count
+        let isSelected = root == selected
+        return HStack(spacing: 10) {
+            PixelImage(image: Icon.domain, size: 22)
+            Text((root as NSString).lastPathComponent).font(Theme.label(14, .bold)).foregroundStyle(Theme.ink).lineLimit(1)
+            Spacer()
+            Text(count == 1 ? tr("1 session") : tr("%d sessions", count)).font(Theme.label(11, .heavy)).foregroundStyle(Theme.inkSoft)
+        }
+        .padding(10)
+        .card(fill: isSelected ? Color(hex: 0xFFF1C9) : Theme.card, border: isSelected ? Theme.crustDark : Theme.ink, lift: isSelected ? 0 : 2)
+        .contentShape(Rectangle())
+        .onTapGesture { select(root) }
     }
 
     func select(_ root: String) {
@@ -60,47 +64,54 @@ struct DomainPanel: View {
 
     func detail(_ domain: DomainModel) -> some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 14) {
-                HStack {
+            VStack(alignment: .leading, spacing: 18) {
+                HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(domain.name).font(Theme.pixel(22)).foregroundStyle(Theme.ink)
-                        Text(domain.root.replacingOccurrences(of: Paths.home.path, with: "~")).font(Theme.mono(11)).foregroundStyle(Theme.ink.opacity(0.6))
+                        Text(domain.name).font(Theme.title(24)).foregroundStyle(Theme.ink)
+                        Text(domain.root.replacingOccurrences(of: Paths.home.path, with: "~")).font(Theme.mono(12)).foregroundStyle(Theme.inkSoft)
                     }
                     Spacer()
                     ForEach(domain.agents.sorted { $0.value > $1.value }, id: \.key) { harness, count in
-                        Text("\(harness.displayName) \(count)").font(Theme.pixel(12)).foregroundStyle(Theme.cream)
-                            .padding(.horizontal, 6).padding(.vertical, 2).background(Theme.color(for: harness))
+                        HStack(spacing: 4) {
+                            HarnessTag(harness: harness)
+                            Text("× \(count)").font(Theme.label(12, .bold)).foregroundStyle(Theme.inkSoft)
+                        }
                     }
                 }
-                SectionTitle(text: "Intention du projet")
-                TextEditor(text: $intent)
-                    .font(Theme.body(13))
-                    .frame(minHeight: 70)
-                    .padding(6)
-                    .background(Color.white.opacity(0.8))
-                    .overlay(Rectangle().stroke(Theme.ink, lineWidth: 2))
-                    .onChange(of: intent) { model.saveIntent(intent, root: domain.root) }
-                Text("Ce que le projet doit accomplir, pour qui, et ce qui compte plus que tout. Tes agents le liront si tu exportes le modèle.")
-                    .font(Theme.body(11)).foregroundStyle(Theme.ink.opacity(0.55))
-                ForEach(domain.conflicts, id: \.self) { conflict in
-                    Text("⚠ " + conflict).font(Theme.body(12, weight: .semibold)).foregroundStyle(Theme.warning)
+                VStack(alignment: .leading, spacing: 8) {
+                    SectionTitle(text: tr("Project intent"))
+                    TextEditor(text: $intent)
+                        .font(Theme.body(14))
+                        .scrollContentBackground(.hidden)
+                        .frame(minHeight: 80)
+                        .padding(8)
+                        .card(lift: 0)
+                        .onChange(of: intent) { model.saveIntent(intent, root: domain.root) }
+                    Text(tr("What the project must achieve, for whom, and what matters most. Your agents will read it if you export the model."))
+                        .font(Theme.label(12, .medium)).foregroundStyle(Theme.inkSoft)
                 }
-                factSection("Conventions écrites", domain.conventions, empty: "Aucune règle écrite pour ce projet.")
-                factSection("Décisions apprises", domain.decisions, empty: "Pas encore de règle apprise.")
-                factSection("Travaux récents", Array(domain.activity.prefix(12)), empty: "Pas de session récente.")
+                ForEach(domain.conflicts, id: \.self) { conflict in
+                    Text(conflict).font(Theme.label(13, .bold)).foregroundStyle(Theme.ink)
+                        .padding(10).frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Theme.warning.opacity(0.2))
+                        .overlay(Rectangle().stroke(Theme.warning, lineWidth: 2))
+                }
+                factSection(tr("Written conventions"), domain.conventions, empty: tr("No written rule for this project."))
+                factSection(tr("Learned decisions"), domain.decisions, empty: tr("No learned rule yet."))
+                factSection(tr("Recent work"), Array(domain.activity.prefix(12)), empty: tr("No recent session."))
                 HStack {
-                    PixelButton(title: showExport ? "Masquer l'aperçu" : "Exporter pour les agents", color: Theme.paper) { showExport.toggle() }
+                    PixelButton(title: showExport ? tr("Hide preview") : tr("Export for the agents"), color: Theme.card) { showExport.toggle() }
                     Spacer()
                 }
                 if showExport {
                     let exported = withIntent(domain)
-                    SectionTitle(text: "Diff exact · \(domain.name)/.boss/domain.md")
+                    SectionTitle(text: tr("Exact diff · %@", "\(domain.name)/.boss/domain.md"))
                     DiffView(lines: UnifiedDiff.lines(old: (try? String(contentsOfFile: exported.exportPath, encoding: .utf8)) ?? "",
                                                       new: exported.markdown, path: ".boss/domain.md"))
-                    PixelButton(title: "Écrire le fichier", color: Theme.success) { model.exportDomain(exported) }
+                    PixelButton(title: tr("Write the file"), color: Theme.success) { model.exportDomain(exported) }
                 }
             }
-            .padding(18)
+            .padding(22)
         }
     }
 
@@ -111,19 +122,29 @@ struct DomainPanel: View {
     }
 
     func factSection(_ title: String, _ facts: [DomainFact], empty: String) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            SectionTitle(text: "\(title) · \(facts.count)")
-            if facts.isEmpty {
-                Text(empty).font(Theme.body(12)).foregroundStyle(Theme.ink.opacity(0.55))
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                SectionTitle(text: title)
+                Text("\(facts.count)").font(Theme.label(11, .heavy)).foregroundStyle(Theme.inkSoft)
+                    .padding(.horizontal, 6).padding(.vertical, 1).background(Theme.ink.opacity(0.07))
             }
-            ForEach(facts.prefix(40)) { fact in
-                HStack(alignment: .top, spacing: 8) {
-                    Text("▸").font(Theme.pixel(12)).foregroundStyle(Theme.pink)
-                    Text(fact.text).font(Theme.body(12)).foregroundStyle(Theme.ink).fixedSize(horizontal: false, vertical: true)
-                    Spacer(minLength: 8)
-                    Text(fact.source).font(Theme.pixel(11)).foregroundStyle(Theme.ink.opacity(0.5))
+            VStack(alignment: .leading, spacing: 0) {
+                if facts.isEmpty {
+                    Text(empty).font(Theme.body(13)).foregroundStyle(Theme.inkSoft).padding(12)
+                }
+                ForEach(Array(facts.prefix(40).enumerated()), id: \.element.id) { index, fact in
+                    HStack(alignment: .firstTextBaseline, spacing: 10) {
+                        Text("▸").font(Theme.label(12, .bold)).foregroundStyle(Theme.pink)
+                        Text(fact.text).font(Theme.body(14)).foregroundStyle(Theme.ink).fixedSize(horizontal: false, vertical: true)
+                        Spacer(minLength: 10)
+                        Text(fact.source).font(Theme.label(11, .medium)).foregroundStyle(Theme.inkSoft)
+                    }
+                    .padding(.horizontal, 12).padding(.vertical, 8)
+                    .background(index % 2 == 0 ? Color.clear : Theme.ink.opacity(0.03))
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .card()
         }
     }
 }

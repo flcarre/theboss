@@ -27,16 +27,16 @@ public struct DomainModel: Sendable, Identifiable {
     public var exportPath: String { (root as NSString).appendingPathComponent(".boss/domain.md") }
 
     public var markdown: String {
-        var lines = ["# \(name) · modèle du domaine", ""]
-        lines += ["## Intention", "", intent.isEmpty ? "_À écrire._" : intent, ""]
+        var lines = [tr("# %@ · domain model", name), ""]
+        lines += [tr("## Intent"), "", intent.isEmpty ? tr("_To be written._") : intent, ""]
         if !conventions.isEmpty {
-            lines += ["## Conventions", ""] + conventions.map { "- \($0.text)" } + [""]
+            lines += [tr("## Conventions"), ""] + conventions.map { "- \($0.text)" } + [""]
         }
         if !decisions.isEmpty {
-            lines += ["## Décisions", ""] + decisions.map { "- \($0.text) (\($0.source))" } + [""]
+            lines += [tr("## Decisions"), ""] + decisions.map { "- \($0.text) (\($0.source))" } + [""]
         }
         if !activity.isEmpty {
-            lines += ["## Travaux récents", ""] + activity.prefix(10).map { "- \($0.text) (\($0.source))" } + [""]
+            lines += [tr("## Recent work"), ""] + activity.prefix(10).map { "- \($0.text) (\($0.source))" } + [""]
         }
         return lines.joined(separator: "\n")
     }
@@ -66,7 +66,7 @@ public enum DomainModelBuilder {
                 if line.hasPrefix("```") { inCode.toggle(); continue }
                 if inCode { continue }
                 if line.hasPrefix("#") {
-                    inLearned = line == SuggestionEngine.learnedSection
+                    inLearned = SuggestionEngine.learnedSections.contains(line)
                     continue
                 }
                 guard line.hasPrefix("- ") || line.hasPrefix("* ") else { continue }
@@ -86,9 +86,9 @@ public enum DomainModelBuilder {
         }
         let name = (root as NSString).lastPathComponent
         for suggestion in suggestions where suggestion.kind == .learnedRule && suggestion.project == name && suggestion.status != .dismissed {
-            let status = suggestion.status == .applied ? "appliquée" : "en attente"
+            let status = suggestion.status == .applied ? tr("applied") : tr("pending")
             if !decisions.contains(where: { normalize($0.text) == normalize(suggestion.title) }) {
-                decisions.append(DomainFact(text: suggestion.title, source: "courrier · \(status)", date: suggestion.createdAt))
+                decisions.append(DomainFact(text: suggestion.title, source: tr("mail · %@", status), date: suggestion.createdAt))
             }
         }
         let projectSessions = sessions.filter { RulesInventory.projectRoot($0.cwd) == root }
@@ -105,7 +105,7 @@ public enum DomainModelBuilder {
         let onlyClaude = claude.subtracting(agents).count
         let onlyAgents = agents.subtracting(claude).count
         guard onlyClaude > 0 || onlyAgents > 0 else { return [] }
-        return ["CLAUDE.md et AGENTS.md divergent : \(onlyClaude) règle\(onlyClaude > 1 ? "s" : "") seulement pour Claude, \(onlyAgents) seulement pour les autres agents."]
+        return [tr("CLAUDE.md and AGENTS.md disagree: %d rules only for Claude, %d only for the other agents.", onlyClaude, onlyAgents)]
     }
 
     static func normalize(_ text: String) -> String {

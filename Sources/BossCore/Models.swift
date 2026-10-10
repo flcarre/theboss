@@ -1,12 +1,14 @@
 import Foundation
 
 public enum Harness: String, Codable, CaseIterable, Sendable {
-    case claude, codex, cursor, pi, omp
+    case claude, codex, gemini, copilot, cursor, pi, omp
 
     public var displayName: String {
         switch self {
         case .claude: "Claude Code"
         case .codex: "Codex"
+        case .gemini: "Gemini"
+        case .copilot: "Copilot"
         case .cursor: "Cursor"
         case .pi: "Pi"
         case .omp: "omp"
@@ -19,9 +21,9 @@ public enum AgentStatus: String, Codable, Sendable, CaseIterable {
 
     public var label: String {
         switch self {
-        case .working: "Au travail"
-        case .needsApproval: "Attend ton feu vert"
-        case .finished: "Terminé"
+        case .working: tr("Working")
+        case .needsApproval: tr("Needs your approval")
+        case .finished: tr("Done")
         }
     }
 

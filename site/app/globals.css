@@ -53,7 +53,7 @@ body {
 h1,
 h2,
 h3,
-.ticker-track span,
+.ticker-half span,
 .foot-big,
 .trend-num,
 .quote blockquote {
@@ -910,22 +910,27 @@ em {
 
 .ticker-track {
   display: flex;
-  gap: 54px;
   width: max-content;
-  animation: marquee 38s linear infinite;
+  animation: marquee 60s linear infinite;
 }
 
-.ticker-track span {
+.ticker-half {
+  display: flex;
+  flex: none;
+}
+
+.ticker-half span {
   display: inline-flex;
   align-items: center;
   gap: 12px;
+  margin-right: 54px;
   font-family: var(--serif);
   font-size: 34px;
   color: var(--cream);
   white-space: nowrap;
 }
 
-.ticker-track span:nth-child(even) {
+.ticker-half span.is-alt {
   font-style: italic;
   color: var(--muted);
 }
@@ -2848,7 +2853,7 @@ h2 {
     text-align: center;
   }
 
-  .ticker-track span {
+  .ticker-half span {
     font-size: 26px;
   }
 

@@ -11,9 +11,7 @@ func depth(forBaseY y: CGFloat) -> CGFloat { 10_000 - y }
 
 final class PlayerNode: SKNode {
     private let sprite = SKSpriteNode()
-    private let shadow = SKSpriteNode(texture: PixelArt.shadow(width: 58, height: 16))
     private var walkFrames: [Facing: [SKTexture]] = [:]
-    private var walkPadding: [Facing: CGFloat] = [:]
     private var idlePadding: [Facing: CGFloat] = [:]
     private static let feetY: CGFloat = 10
     private var idle: [Facing: SKTexture] = [:]
@@ -29,11 +27,7 @@ final class PlayerNode: SKNode {
             idle[facing] = Assets.texture(idlePath)
             idlePadding[facing] = Assets.bottomPadding(idlePath)
             walkFrames[facing] = Assets.frames("characters/boss/walk/\(facing.rawValue)")
-            walkPadding[facing] = Assets.bottomPadding("characters/boss/walk/\(facing.rawValue)/0.png")
         }
-        shadow.position = CGPoint(x: 0, y: Self.feetY + 1)
-        shadow.zPosition = -1
-        addChild(shadow)
         sprite.anchorPoint = CGPoint(x: 0.5, y: 0)
         addChild(sprite)
         face(.south)
@@ -50,6 +44,11 @@ final class PlayerNode: SKNode {
         }
     }
 
+    private func feetOffset(canvasHeight: CGFloat) -> CGFloat {
+        let restHeight = idle[facing]?.size().height ?? canvasHeight
+        return Self.feetY - (idlePadding[facing] ?? 0) - (canvasHeight - restHeight) / 2
+    }
+
     func place(at tile: Tile) {
         self.tile = tile
         position = TheBoss.position(of: tile)
@@ -62,7 +61,7 @@ final class PlayerNode: SKNode {
         let target = TheBoss.position(of: tile)
         if let frames = walkFrames[facing], !frames.isEmpty, sprite.action(forKey: "walk") == nil || walkingFacing != facing {
             walkingFacing = facing
-            sprite.position.y = Self.feetY - (walkPadding[facing] ?? 0)
+            sprite.position.y = feetOffset(canvasHeight: frames[0].size().height)
             sprite.run(.repeatForever(.animate(with: frames, timePerFrame: 0.075, resize: true, restore: false)), withKey: "walk")
         }
         let move = SKAction.customAction(withDuration: duration) { [weak self] node, elapsed in
@@ -91,7 +90,8 @@ final class PlayerNode: SKNode {
             run(.sequence([.wait(forDuration: 0.15), .run(completion)]))
             return
         }
-        sprite.position.y = Self.feetY - Assets.bottomPadding("characters/boss/whip/\(facing.rawValue)/0.png")
+        let paddings = (0..<frames.count).map { Assets.bottomPadding("characters/boss/whip/\(facing.rawValue)/\($0).png") }.sorted()
+        sprite.position.y = Self.feetY - paddings[paddings.count / 2]
         sprite.run(.sequence([
             .animate(with: frames, timePerFrame: 0.055, resize: true, restore: false),
             .run { [weak self] in

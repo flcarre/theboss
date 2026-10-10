@@ -5,6 +5,12 @@ VERSION=$(cat VERSION)
 swift build -c release
 [ -f build/AppIcon.icns ] || python3 scripts/make_icon.py
 APP=build/TheBoss.app
+WAS_RUNNING=0
+if pgrep -f "$APP/Contents/MacOS/TheBoss" > /dev/null; then
+  WAS_RUNNING=1
+  osascript -e 'tell application id "io.theboss.app" to quit' || true
+  while pgrep -f "$APP/Contents/MacOS/TheBoss" > /dev/null; do sleep 0.2; done
+fi
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp .build/release/TheBoss "$APP/Contents/MacOS/TheBoss"
@@ -31,3 +37,4 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 PLIST
 codesign --force --deep --sign - "$APP"
 echo "Built $APP"
+if [ "$WAS_RUNNING" = 1 ]; then open "$APP"; fi

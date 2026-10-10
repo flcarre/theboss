@@ -8,7 +8,7 @@ const mono = JetBrains_Mono({ subsets: ["latin"], weight: ["400", "600"], variab
 const pixel = Pixelify_Sans({ subsets: ["latin"], weight: ["400", "500", "600", "700"], variable: "--font-pixel" });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://theboss.vercel.app"),
+  metadataBase: new URL("https://theboss-iota.vercel.app"),
   title: "The Boss — your coding agents, clocked in",
   description:
     "A macOS app that turns every Claude Code, Codex, Cursor, Pi and omp session into a pixel robot at a desk. Walk the floor, see who needs you, and teach your setup from your own corrections.",

@@ -131,6 +131,44 @@ struct Chip: View {
     }
 }
 
+struct TabItem: Identifiable {
+    var id: String
+    var title: String
+    var count: Int
+    var color: Color
+}
+
+struct SegmentedTabs: View {
+    var items: [TabItem]
+    @Binding var selection: String
+
+    var body: some View {
+        HStack(spacing: 0) {
+            ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+                let selected = item.id == selection
+                Button { selection = item.id } label: {
+                    HStack(spacing: 6) {
+                        Text(item.title).font(Theme.label(13, .bold)).lineLimit(1).minimumScaleFactor(0.8)
+                        Text("\(item.count)").font(Theme.label(12, .heavy)).monospacedDigit()
+                            .padding(.horizontal, 6).padding(.vertical, 1)
+                            .background(selected ? Theme.cream.opacity(0.25) : Theme.ink.opacity(0.08))
+                    }
+                    .foregroundStyle(selected ? Theme.cream : Theme.ink)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 7)
+                    .background(selected ? item.color : Theme.card)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                if index < items.count - 1 { Rectangle().fill(Theme.ink).frame(width: 2) }
+            }
+        }
+        .fixedSize(horizontal: false, vertical: true)
+        .overlay(Rectangle().stroke(Theme.ink, lineWidth: 2))
+        .background(Rectangle().fill(Theme.ink.opacity(0.18)).offset(x: 2, y: 2))
+    }
+}
+
 struct OverviewPanel: View {
     @ObservedObject var model: GameModel
     @State private var filter: AgentStatus?
@@ -142,11 +180,14 @@ struct OverviewPanel: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            HStack(spacing: 8) {
-                Chip(text: tr("All"), count: model.sessions.count, color: Theme.base, selected: filter == nil) { filter = nil }
-                Chip(text: tr("Waiting"), count: model.needsYou.count, color: Theme.warning, selected: filter == .needsApproval) { filter = .needsApproval }
-                Chip(text: tr("Working"), count: model.working.count, color: Theme.success, selected: filter == .working) { filter = .working }
-                Chip(text: tr("Done"), count: model.finished.count, color: Theme.muted, selected: filter == .finished) { filter = .finished }
+            HStack(spacing: 16) {
+                SegmentedTabs(items: [
+                    TabItem(id: "all", title: tr("All"), count: model.sessions.count, color: Theme.base),
+                    TabItem(id: AgentStatus.needsApproval.rawValue, title: tr("Waiting"), count: model.needsYou.count, color: Theme.warning),
+                    TabItem(id: AgentStatus.working.rawValue, title: tr("Working"), count: model.working.count, color: Theme.success),
+                    TabItem(id: AgentStatus.finished.rawValue, title: tr("Done"), count: model.finished.count, color: Theme.muted),
+                ], selection: Binding(get: { filter?.rawValue ?? "all" }, set: { filter = AgentStatus(rawValue: $0) }))
+                .frame(maxWidth: 560)
                 Spacer()
                 Text(tr("Refreshed every 2 s")).font(Theme.label(12, .medium)).foregroundStyle(Theme.inkSoft.opacity(0.7))
             }

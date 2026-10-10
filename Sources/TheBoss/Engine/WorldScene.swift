@@ -62,14 +62,23 @@ final class WorldScene: SKScene {
                 floor.addChild(tile)
             }
         }
-        let wallTexture = PixelArt.wall(room.wall)
-        for c in 0..<room.cols {
+        let wallPath = room.id == .office ? "walls/wall_office.png" : "walls/wall_openspace.png"
+        let wallTexture = FileManager.default.fileExists(atPath: Assets.url(wallPath).path) ? Assets.texture(wallPath) : PixelArt.wall(room.wall)
+        let wallWidth = wallTexture.size().width
+        let wallCount = Int((CGFloat(room.cols) * tileSize / wallWidth).rounded(.up))
+        let wallCrop = SKCropNode()
+        let wallMask = SKSpriteNode(color: .white, size: CGSize(width: CGFloat(room.cols) * tileSize, height: wallTexture.size().height))
+        wallMask.anchorPoint = .zero
+        wallCrop.maskNode = wallMask
+        wallCrop.position = CGPoint(x: 0, y: CGFloat(room.walkRows) * tileSize)
+        wallCrop.zPosition = -900
+        for index in 0..<wallCount {
             let wall = SKSpriteNode(texture: wallTexture)
             wall.anchorPoint = .zero
-            wall.position = CGPoint(x: CGFloat(c) * tileSize, y: CGFloat(room.walkRows) * tileSize)
-            wall.zPosition = -900
-            world.addChild(wall)
+            wall.position = CGPoint(x: CGFloat(index) * wallWidth, y: 0)
+            wallCrop.addChild(wall)
         }
+        world.addChild(wallCrop)
         let height = CGFloat(room.rows) * tileSize
         let width = CGFloat(room.cols) * tileSize
         for (x, w) in [(-8.0, 8.0), (Double(width), 8.0)] {

@@ -77,7 +77,7 @@ struct StatusHUD: View {
                 model.open(.inbox)
             } label: {
                 HStack(spacing: 7) {
-                    PixelImage(image: Icon.mail, size: 22)
+                    PixelImage(image: Icon.mail, size: 24)
                     Text("\(model.openSuggestions.count)").font(Theme.title(18))
                         .foregroundStyle(model.openSuggestions.isEmpty ? Theme.textSecondary : Theme.crust)
                 }
@@ -108,26 +108,27 @@ struct UsageHUD: View {
     var body: some View {
         let providers = (model.usage?.providers ?? []).filter { $0.state == .ok && !$0.windows.isEmpty }
         if !providers.isEmpty {
-            HStack(spacing: 16) {
-                ForEach(Array(providers.enumerated()), id: \.element.harness) { index, provider in
-                    if index > 0 { Rectangle().fill(Theme.outline).frame(width: 2, height: 22) }
+            VStack(alignment: .leading, spacing: 8) {
+                ForEach(providers, id: \.harness) { provider in
                     if let window = provider.windows.first {
                         HStack(spacing: 8) {
                             Rectangle().fill(Theme.color(for: provider.harness)).frame(width: 4, height: 18)
                             Text(provider.harness.displayName).font(Theme.label(13)).foregroundStyle(Theme.cream)
+                                .frame(width: 92, alignment: .leading)
+                            Text(window.label).font(Theme.label(11, .medium)).foregroundStyle(Theme.textSecondary)
+                                .frame(width: 40, alignment: .leading)
                             Gauge8(fraction: window.usedPercent / 100, color: gaugeColor(window.usedPercent))
-                                .frame(width: 70, height: 14)
+                                .frame(width: 110, height: 14)
                             Text("\(Int(window.usedPercent.rounded())) %").font(Theme.label(13, .bold)).foregroundStyle(Theme.cream)
-                                .monospacedDigit()
+                                .monospacedDigit().frame(width: 44, alignment: .trailing)
                         }
-                        .help("\(provider.harness.displayName) · \(window.label)")
                     }
                 }
             }
-            .frame(height: HUD.height)
             .darkPixelFrame(padding: 12)
             .contentShape(Rectangle())
             .onTapGesture { model.open(.usage) }
+            .help(tr("Boss computer: usage (⌘3)"))
         }
     }
 }

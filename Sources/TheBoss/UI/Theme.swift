@@ -143,7 +143,7 @@ struct PixelImage: View {
 
     var body: some View {
         if let image {
-            Image(nsImage: image).interpolation(.none).resizable().scaledToFit().frame(width: size, height: size)
+            Image(nsImage: image).interpolation(.none).resizable().aspectRatio(contentMode: .fit).frame(width: size, height: size)
         } else {
             Color.clear.frame(width: size, height: size)
         }
@@ -207,14 +207,14 @@ struct Gauge8: View {
 }
 
 enum Icon {
-    static var agents: NSImage? { Assets.image("icons/agents.png") }
-    static var mail: NSImage? { Assets.image("icons/mail.png") }
-    static var usage: NSImage? { Assets.image("icons/usage.png") }
-    static var rules: NSImage? { Assets.image("icons/rules.png") }
-    static var stats: NSImage? { Assets.image("icons/stats.png") }
-    static var settings: NSImage? { Assets.image("icons/settings.png") }
-    static var domain: NSImage? { Assets.image("icons/domain.png") }
-    static var logbook: NSImage? { Assets.image("icons/logbook.png") }
+    static var agents: NSImage? { Assets.trimmed("icons/agents.png") }
+    static var mail: NSImage? { Assets.trimmed("icons/mail.png") }
+    static var usage: NSImage? { Assets.trimmed("icons/usage.png") }
+    static var rules: NSImage? { Assets.trimmed("icons/rules.png") }
+    static var stats: NSImage? { Assets.trimmed("icons/stats.png") }
+    static var settings: NSImage? { Assets.trimmed("icons/settings.png") }
+    static var domain: NSImage? { Assets.trimmed("icons/domain.png") }
+    static var logbook: NSImage? { Assets.trimmed("icons/logbook.png") }
     static var back: NSImage? { ProceduralArt.backIcon }
     static var close: NSImage? { ProceduralArt.closeIcon }
     static var search: NSImage? { ProceduralArt.searchIcon }

@@ -36,7 +36,13 @@ swift run TheBoss                         # lance en debug
 python3 scripts/make_demo_home.py build/demo-home && BOSS_HOME=build/demo-home swift run TheBoss
 python3 scripts/fetch_pixellab.py         # retélécharge les sprites PixelLab (design/pixellab.json)
 python3 scripts/make_icon.py              # régénère l'icône
+python3 scripts/import_chatgpt.py         # convertit les images ChatGPT de design/chatgpt/generated/ au format du jeu
 ```
+
+Nouveaux assets avec ChatGPT : donne `design/chatgpt/requests.json` à ChatGPT, range les PNG qu'il renvoie
+dans `design/chatgpt/generated/` sous le nom indiqué (`file`), puis lance `scripts/import_chatgpt.py` et
+`scripts/bundle.sh`. Le script ramène chaque image à sa taille native en pixels, limite la palette et rend la
+transparence nette.
 
 Commandes de jeu : flèches ou WASD pour marcher, Maj pour courir, Espace ou Entrée pour parler, F pour
 fouetter, Échap pour le menu. ⌘1 à ⌘6 ouvrent directement les écrans, ⌘, les réglages. La souris marche aussi : clique un robot

@@ -39,6 +39,37 @@ enum Assets {
         return texture
     }
 
+    nonisolated(unsafe) private static var trimmedImages: [String: NSImage] = [:]
+
+    static func trimmed(_ path: String) -> NSImage? {
+        if let cached = trimmedImages[path] { return cached }
+        guard let image = image(path), let cg = image.cgImage(forProposedRect: nil, context: nil, hints: nil),
+              let box = opaqueBounds(cg), let cropped = cg.cropping(to: box) else { return image(path) }
+        let result = NSImage(cgImage: cropped, size: NSSize(width: cropped.width, height: cropped.height))
+        trimmedImages[path] = result
+        return result
+    }
+
+    static func opaqueBounds(_ cg: CGImage) -> CGRect? {
+        guard let data = cg.dataProvider?.data, let bytes = CFDataGetBytePtr(data) else { return nil }
+        let bytesPerPixel = cg.bitsPerPixel / 8
+        let alphaOffset: Int
+        switch cg.alphaInfo {
+        case .first, .premultipliedFirst, .noneSkipFirst: alphaOffset = 0
+        default: alphaOffset = bytesPerPixel - 1
+        }
+        var minX = cg.width, minY = cg.height, maxX = -1, maxY = -1
+        for y in 0..<cg.height {
+            for x in 0..<cg.width where bytes[y * cg.bytesPerRow + x * bytesPerPixel + alphaOffset] > 16 {
+                minX = min(minX, x); maxX = max(maxX, x); minY = min(minY, y); maxY = max(maxY, y)
+            }
+        }
+        guard maxX >= minX, maxY >= minY else { return nil }
+        let side = max(maxX - minX, maxY - minY) + 1
+        let cx = (minX + maxX + 1) / 2, cy = (minY + maxY + 1) / 2
+        return CGRect(x: cx - side / 2, y: cy - side / 2, width: side, height: side)
+    }
+
     nonisolated(unsafe) private static var paddings: [String: CGFloat] = [:]
 
     static func bottomPadding(_ path: String) -> CGFloat {

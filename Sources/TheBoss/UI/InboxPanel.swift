@@ -12,16 +12,12 @@ struct InboxPanel: View {
     var body: some View {
         HStack(spacing: 0) {
             VStack(alignment: .leading, spacing: 12) {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        tabChip(.new, tr("New"))
-                        tabChip(.saved, tr("Later"))
-                        tabChip(.applied, tr("Applied"))
-                        tabChip(.dismissed, tr("Dismissed"))
-                    }
-                    .padding(.bottom, 4)
-                    .padding(.trailing, 4)
-                }
+                SegmentedTabs(items: [
+                    tabItem(.new, tr("New"), Theme.pink),
+                    tabItem(.saved, tr("Later"), Theme.base),
+                    tabItem(.applied, tr("Applied"), Theme.base),
+                    tabItem(.dismissed, tr("Dismissed"), Theme.base),
+                ], selection: Binding(get: { tab.rawValue }, set: { tab = SuggestionStatus(rawValue: $0) ?? .new; selectedId = nil }))
                 if !model.insightsReady {
                     EmptyState(text: tr("The mailman is reading your conversations…"))
                 } else if items.isEmpty {
@@ -40,7 +36,7 @@ struct InboxPanel: View {
                 }
             }
             .padding(20)
-            .frame(width: 400)
+            .frame(width: 460)
             Rectangle().fill(Theme.ink).frame(width: 3)
             if let selected {
                 SuggestionDetail(model: model, suggestion: selected)
@@ -50,12 +46,8 @@ struct InboxPanel: View {
         }
     }
 
-    func tabChip(_ status: SuggestionStatus, _ label: String) -> some View {
-        let count = model.suggestions.filter { $0.status == status }.count
-        return Chip(text: label, count: count, color: status == .new ? Theme.pink : Theme.base, selected: tab == status) {
-            tab = status
-            selectedId = nil
-        }
+    func tabItem(_ status: SuggestionStatus, _ label: String, _ color: Color) -> TabItem {
+        TabItem(id: status.rawValue, title: label, count: model.suggestions.filter { $0.status == status }.count, color: color)
     }
 }
 
@@ -72,7 +64,7 @@ struct SuggestionRow: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            PixelImage(image: suggestion.kind == .learnedRule ? Icon.mail : Icon.settings, size: 28)
+            PixelImage(image: suggestion.kind == .learnedRule ? Icon.mail : Icon.settings, size: 32)
             VStack(alignment: .leading, spacing: 4) {
                 Text(kindLabel.uppercased()).font(Theme.label(10, .heavy)).tracking(0.9).foregroundStyle(Theme.crustDark)
                 Text(suggestion.title).font(Theme.label(14, .bold)).foregroundStyle(Theme.ink).lineLimit(2)

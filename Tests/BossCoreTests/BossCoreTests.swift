@@ -239,4 +239,28 @@ struct BossCoreTests {
         #expect(model.markdown.contains("## Intention\n\nSell socks."))
         #expect(DomainModelBuilder.projects(from: [session]) == [project.path])
     }
+
+    @Test func readsPiOmpAndCursorSessions() throws {
+        let home = try makeHome()
+        let now = ISO8601DateFormatter().string(from: Date())
+        let lines = [
+            jsonLine(["type": "session", "id": "pi-1", "timestamp": now, "cwd": "/work/api"]),
+            jsonLine(["type": "message", "timestamp": now, "message": ["role": "user", "content": [["type": "text", "text": "Ajoute la pagination"]]]]),
+            jsonLine(["type": "message", "timestamp": now, "message": ["role": "assistant", "model": "gpt-x",
+                      "content": [["type": "toolCall", "id": "call1", "name": "bash", "arguments": ["command": "npm test"]]],
+                      "usage": ["input": 100, "output": 20, "cacheRead": 5, "cacheWrite": 0]]]),
+        ]
+        try write(lines.joined(separator: "\n") + "\n", to: home.appendingPathComponent(".pi/agent/sessions/--work-api--/s.jsonl"))
+        try write(lines.joined(separator: "\n") + "\n", to: home.appendingPathComponent(".omp/agent/sessions/--work-api--/s.jsonl"))
+        try write("", to: home.appendingPathComponent(".cursor/chats/abc/chat1/store.db"))
+        let sessions = AgentMonitor().sessions()
+        let pi = try #require(sessions.first { $0.harness == .pi })
+        #expect(pi.cwd == "/work/api")
+        #expect(pi.title == "Ajoute la pagination")
+        #expect(pi.tokens.total == 125)
+        #expect(pi.model == "gpt-x")
+        #expect(pi.status == .working)
+        #expect(sessions.contains { $0.harness == .omp && $0.sessionId == "pi-1" })
+        #expect(sessions.contains { $0.harness == .cursor && $0.status == .working })
+    }
 }

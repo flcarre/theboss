@@ -22,7 +22,7 @@ const SECTIONS: { status: Status; title: string; rows: Row[] }[] = [
       { harness: "codex", title: "Speed up the nightly aggregation job", project: "data-pipeline", ago: "3 sec. ago" },
       { harness: "gemini", title: "Tune the ranking weights", project: "search-service", ago: "8 sec. ago" },
       { harness: "cursor", title: "Rebuild the home page", project: "web-dashboard", ago: "21 sec. ago" },
-      { harness: "pi", title: "Fix the crash on launch", project: "ios-app", ago: "1 min. ago" },
+      { harness: "claude", title: "Fix the crash on launch", project: "ios-app", ago: "1 min. ago" },
     ],
   },
   {
@@ -30,7 +30,7 @@ const SECTIONS: { status: Status; title: string; rows: Row[] }[] = [
     title: "Recently done",
     rows: [
       { harness: "copilot", title: "Add a --json flag to the CLI", project: "cli-tools", ago: "6 min. ago" },
-      { harness: "omp", title: "Write the Windows install guide", project: "docs-site", ago: "18 min. ago" },
+      { harness: "codex", title: "Write the Windows install guide", project: "docs-site", ago: "18 min. ago" },
     ],
   },
 ];

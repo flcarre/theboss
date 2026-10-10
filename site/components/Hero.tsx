@@ -17,7 +17,7 @@ export default function Hero() {
         </h1>
         <div className="hero-side reveal">
           <p>
-            Every Claude Code, Codex, Gemini, Copilot, Cursor, Pi and omp session becomes a little robot at a desk. Walk
+            Every Claude Code, Codex, Gemini, Copilot and Cursor session becomes a little robot at a desk. Walk
             the floor to see who&rsquo;s typing, who&rsquo;s waving for your OK, and who already clocked out. Then crack
             the whip.
           </p>

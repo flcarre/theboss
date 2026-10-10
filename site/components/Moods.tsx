@@ -39,7 +39,7 @@ export default function Moods() {
         <figure className="mood">
           <div className="mood-sprite">
             <img className="mood-emote float" src="/assets/emotes/sleep.png" alt="" />
-            <img className="mood-still" src={stillUrl("omp")} alt="" />
+            <img className="mood-still" src={stillUrl("copilot")} alt="" />
           </div>
           <figcaption>
             <span className="mood-tag tag-done">Done</span>

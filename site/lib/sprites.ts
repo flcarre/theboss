@@ -1,4 +1,4 @@
-export type Harness = "claude" | "codex" | "gemini" | "copilot" | "cursor" | "pi" | "omp";
+export type Harness = "claude" | "codex" | "gemini" | "copilot" | "cursor";
 export type Dir = "south" | "north" | "east" | "west";
 
 export type SheetName =
@@ -28,10 +28,6 @@ export const SHEETS: Record<SheetName, Sheet> = {
   robot_gemini_alert_south: { size: 128, frames: 9, top: 23, foot: 104 },
   robot_copilot_typing_south: { size: 136, frames: 9, top: 18, foot: 116 },
   robot_copilot_alert_south: { size: 136, frames: 9, top: 17, foot: 116 },
-  robot_omp_typing_south: { size: 164, frames: 9, top: 24, foot: 140 },
-  robot_omp_alert_south: { size: 164, frames: 9, top: 24, foot: 140 },
-  robot_pi_typing_south: { size: 172, frames: 9, top: 23, foot: 147 },
-  robot_pi_alert_south: { size: 172, frames: 9, top: 24, foot: 147 },
 };
 
 export const STILLS: Record<Harness | "boss", { top: number; foot: number }> = {
@@ -41,8 +37,6 @@ export const STILLS: Record<Harness | "boss", { top: number; foot: number }> = {
   gemini: { top: 26, foot: 104 },
   copilot: { top: 20, foot: 112 },
   cursor: { top: 14, foot: 105 },
-  omp: { top: 6, foot: 122 },
-  pi: { top: 4, foot: 125 },
 };
 
 export const ROBOT_SCALE: Record<Harness, number> = {
@@ -51,11 +45,9 @@ export const ROBOT_SCALE: Record<Harness, number> = {
   gemini: 1.08,
   copilot: 1,
   cursor: 1,
-  pi: 0.82,
-  omp: 0.86,
 };
 
-export const HARNESS_ORDER: Harness[] = ["claude", "codex", "gemini", "copilot", "cursor", "pi", "omp"];
+export const HARNESS_ORDER: Harness[] = ["claude", "codex", "gemini", "copilot", "cursor"];
 
 export const HARNESS_NAME: Record<Harness, string> = {
   claude: "Claude Code",
@@ -63,8 +55,6 @@ export const HARNESS_NAME: Record<Harness, string> = {
   gemini: "Gemini",
   copilot: "Copilot",
   cursor: "Cursor",
-  pi: "Pi",
-  omp: "omp",
 };
 
 export const HARNESS_COLOR: Record<Harness, string> = {
@@ -73,8 +63,6 @@ export const HARNESS_COLOR: Record<Harness, string> = {
   gemini: "#4F7BD9",
   copilot: "#8A63D2",
   cursor: "#9AA3AD",
-  pi: "#8C6BF2",
-  omp: "#5BD16E",
 };
 
 export const sheetUrl = (name: SheetName) => `/assets/sheets/${name}.png`;

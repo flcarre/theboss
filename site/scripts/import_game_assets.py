@@ -8,7 +8,7 @@ SITE = pathlib.Path(__file__).resolve().parent.parent
 GAME = SITE.parent / "Sources" / "TheBoss" / "Assets"
 OUT = SITE / "public" / "assets"
 GAME_ROBOTS = ["claude", "codex", "cursor", "gemini", "copilot"]
-SITE_ONLY_ROBOTS = ["pi", "omp"]
+SITE_ONLY_ROBOTS: list[str] = []
 
 
 def frames(folder: pathlib.Path):

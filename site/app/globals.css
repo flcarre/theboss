@@ -1937,7 +1937,7 @@ h2 {
 }
 
 .cards > .card {
-  flex: 0 1 calc((100% - 54px) / 4);
+  flex: 0 1 calc((100% - 72px) / 5);
 }
 
 .card {

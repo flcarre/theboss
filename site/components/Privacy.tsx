@@ -1,4 +1,4 @@
-const PATHS = ["~/.claude", "~/.codex", "~/.gemini", "~/.copilot", "~/.cursor", "~/.pi", "~/.omp"];
+const PATHS = ["~/.claude", "~/.codex", "~/.gemini", "~/.copilot", "~/.cursor"];
 
 export default function Privacy() {
   return (

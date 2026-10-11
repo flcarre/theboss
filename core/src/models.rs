@@ -228,6 +228,16 @@ pub struct RateWindow {
     pub window_minutes: Option<i64>,
 }
 
+impl RateWindow {
+    pub fn rolled_over(mut self, current: Timestamp) -> Self {
+        if self.resets_at.is_some_and(|reset| reset <= current) {
+            self.used_percent = 0.0;
+            self.resets_at = None;
+        }
+        self
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct CodexRateSnapshot {
     pub observed_at: Timestamp,

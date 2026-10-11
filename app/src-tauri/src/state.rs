@@ -1,5 +1,6 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex, MutexGuard};
+use std::time::Instant;
 
 use boss_core::analytics::AnalyticsReport;
 use boss_core::diff::DiffLine;
@@ -75,6 +76,7 @@ pub struct Data {
     pub installed: Vec<Harness>,
     pub refining: HashSet<String>,
     pub repairing_claude: bool,
+    pub last_auto_repair: Option<Instant>,
     pub previous_status: HashMap<String, AgentStatus>,
 }
 

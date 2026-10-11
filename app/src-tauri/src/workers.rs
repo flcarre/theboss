@@ -1,9 +1,10 @@
 use std::collections::{HashMap, HashSet};
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use boss_core::suggestions::{Suggestion, SuggestionEngine, SuggestionKind, SuggestionStatus};
-use boss_core::{analytics, rule_writer, rules, tr, trf, AgentSession, AgentStatus};
+use boss_core::usage::UsageState;
+use boss_core::{analytics, rule_writer, rules, tr, trf, AgentSession, AgentStatus, Harness};
 use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_notification::NotificationExt;
 
@@ -14,6 +15,7 @@ const HISTORY_WINDOW: f64 = 30.0 * 86400.0;
 const SESSIONS_EVERY: Duration = Duration::from_secs(2);
 const USAGE_EVERY: Duration = Duration::from_secs(120);
 const INSIGHTS_EVERY: Duration = Duration::from_secs(300);
+const AUTO_REPAIR_EVERY: Duration = Duration::from_secs(30 * 60);
 
 pub fn start(app: &AppHandle) {
     let sessions_app = app.clone();
@@ -119,6 +121,10 @@ pub fn refresh_usage(app: &AppHandle, force: bool) {
     }
     let report = boss.usage.report(force);
     boss.store.record_usage(&report.providers);
+    let claude_token_expired = report
+        .providers
+        .iter()
+        .any(|provider| provider.harness == Harness::Claude && provider.state == UsageState::TokenExpired);
     let insights_ready = boss.data().insights_ready;
     let analytics = insights_ready.then(|| analytics::build(&boss.store, &report.daily, 28, boss_core::util::now()));
     {
@@ -129,6 +135,18 @@ pub fn refresh_usage(app: &AppHandle, force: bool) {
         }
     }
     emit_snapshot(app);
+    if claude_token_expired && claim_auto_repair(&boss) {
+        repair_claude(app);
+    }
+}
+
+fn claim_auto_repair(boss: &Boss) -> bool {
+    let mut data = boss.data();
+    if data.last_auto_repair.is_some_and(|last| last.elapsed() < AUTO_REPAIR_EVERY) {
+        return false;
+    }
+    data.last_auto_repair = Some(Instant::now());
+    true
 }
 
 pub fn refresh_insights(app: &AppHandle) {
